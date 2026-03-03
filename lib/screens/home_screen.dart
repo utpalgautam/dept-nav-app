@@ -58,7 +58,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // Welcome Message
-                Text(
+                const Text(
                   'Welcome!',
                   style: TextStyle(
                     fontSize: 28,

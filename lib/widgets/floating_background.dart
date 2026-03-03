@@ -39,7 +39,7 @@ class _FloatingBackgroundState extends State<FloatingBackground>
       builder: (context, child) {
         final screenHeight = MediaQuery.of(context).size.height;
 
-        // Loop from top to bottom
+        // Loop from top to bottom (Downward)
         double progress = (_bgController.value + delay) % 1.0;
         double top = (progress * (screenHeight + size)) - size;
 
@@ -82,33 +82,37 @@ class _FloatingBackgroundState extends State<FloatingBackground>
         // Ensure the Stack fills the entire screen
         const SizedBox.expand(),
 
-        // Animated Background Shapes - Floating Circles
-        _buildBackgroundShape(-20, const Color(0xFFC0CA33),
-            size: 100, speed: 1.2, delay: 0.1, opacity: 0.15), // Darker Parrot
-        _buildBackgroundShape(screenWidth * 0.7, const Color(0xFF9E9D24),
-            size: 140,
-            speed: 0.8,
-            delay: 0.4,
-            opacity: 0.18), // Darker Light Green
-        _buildBackgroundShape(screenWidth * 0.2, const Color(0xFF2E7D32),
-            size: 180,
-            speed: 0.5,
-            delay: 0.7,
-            opacity: 0.15), // Dark Leaf Green
-        _buildBackgroundShape(screenWidth * 0.5, const Color(0xFF1B5E20),
-            size: 160,
+        // Animated Background Shapes - Floating Circles (Downward, Varied Sizes, Overlapping)
+        _buildBackgroundShape(screenWidth * 0.05, const Color(0xFFC0CA33),
+            size: 160, speed: 1.2, delay: 0.1, opacity: 0.15), // Large, Left
+        _buildBackgroundShape(screenWidth * 0.15, const Color(0xFF0D5302),
+            size: 120,
+            speed: 0.9,
+            delay: 0.5,
+            opacity: 0.16), // Overlaps with 0.05
+
+        _buildBackgroundShape(screenWidth * 0.4, const Color(0xFF1B5E20),
+            size: 200,
             speed: 0.6,
             delay: 0.3,
-            opacity: 0.14), // Very Dark Green
-        _buildBackgroundShape(screenWidth * 0.8, const Color(0xFF9E9D24),
-            size: 80, speed: 1.5, delay: 0.2, opacity: 0.2),
-        _buildBackgroundShape(screenWidth * 0.1, const Color(0xFF0D5302),
-            size: 110,
-            speed: 0.9,
-            delay: 0.8,
-            opacity: 0.16), // Deep Forest Green
-        _buildBackgroundShape(screenWidth * 0.4, const Color(0xFF827717),
-            size: 120, speed: 1.0, delay: 0.5, opacity: 0.18),
+            opacity: 0.14), // Giant, Center-Left
+        _buildBackgroundShape(screenWidth * 0.55, const Color(0xFF827717),
+            size: 140,
+            speed: 1.0,
+            delay: 0.7,
+            opacity: 0.18), // Overlaps with 0.4
+
+        _buildBackgroundShape(screenWidth * 0.75, const Color(0xFF9E9D24),
+            size: 180, speed: 0.8, delay: 0.2, opacity: 0.18), // Right
+        _buildBackgroundShape(screenWidth * 0.85, const Color(0xFF2E7D32),
+            size: 100,
+            speed: 1.3,
+            delay: 0.6,
+            opacity: 0.20), // Overlaps with 0.75
+
+        // Extra small filler to create depth
+        _buildBackgroundShape(screenWidth * 0.3, const Color(0xFFC0CA33),
+            size: 80, speed: 1.5, delay: 0.8, opacity: 0.12),
 
         // The content of the screen
         widget.child,
