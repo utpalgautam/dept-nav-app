@@ -4,16 +4,20 @@ import '../widgets/password_field.dart';
 import '../widgets/email_field.dart';
 import '../widgets/primary_button.dart';
 import '../utils/validators.dart';
+import '../services/firebase_auth_service.dart';
+import 'home_screen.dart';
 
 class StudentRegisterScreen extends StatefulWidget {
   const StudentRegisterScreen({super.key});
 
   @override
-  State<StudentRegisterScreen> createState() =>
-      _StudentRegisterScreenState();
+  State<StudentRegisterScreen> createState() => _StudentRegisterScreenState();
 }
 
 class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  bool _isLoading = false;
+
   final nameController = TextEditingController();
   final rollController = TextEditingController();
   final emailController = TextEditingController();
@@ -28,13 +32,11 @@ class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
 
   void checkPasswordMatch() {
     setState(() {
-      hasStartedTypingConfirm =
-          confirmPasswordController.text.isNotEmpty;
+      hasStartedTypingConfirm = confirmPasswordController.text.isNotEmpty;
 
       passwordsMatch =
-          passwordController.text ==
-              confirmPasswordController.text &&
-          hasStartedTypingConfirm;
+          passwordController.text == confirmPasswordController.text &&
+              hasStartedTypingConfirm;
     });
   }
 
@@ -66,18 +68,15 @@ class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
               controller: nameController,
             ),
             const SizedBox(height: 12),
-
             CustomTextField(
               label: "Roll Number",
               controller: rollController,
             ),
             const SizedBox(height: 12),
-
             EmailField(
               controller: emailController,
               isValid: emailTyped ? emailValid : null,
             ),
-
             if (emailTyped && !emailValid)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
@@ -86,34 +85,74 @@ class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
                   style: TextStyle(color: Colors.red, fontSize: 12),
                 ),
               ),
-
             const SizedBox(height: 12),
-
             CustomTextField(
               label: "Password",
               controller: passwordController,
               obscure: true,
             ),
             const SizedBox(height: 12),
-
             PasswordField(
               controller: confirmPasswordController,
               match: hasStartedTypingConfirm ? passwordsMatch : null,
             ),
-
             const SizedBox(height: 24),
-
             PrimaryButton(
               text: "Create Account",
-              onPressed: () {
-                if (!passwordsMatch || !emailValid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please fix errors"),
-                    ),
-                  );
-                }
-              },
+              isLoading: _isLoading,
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      if (!passwordsMatch || !emailValid) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Please fix errors"),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final navigator = Navigator.of(context);
+
+                      setState(() {
+                        _isLoading = true;
+                      });
+
+                      try {
+                        await _authService.signUp(
+                          email: emailController.text.trim(),
+                          password: passwordController.text,
+                          role: 'student',
+                          additionalData: {
+                            'name': nameController.text.trim(),
+                            'rollNumber': rollController.text.trim(),
+                          },
+                        );
+
+                        navigator.pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const HomeScreen(showWelcomeDialog: true),
+                          ),
+                        );
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  e.toString().replaceAll('Exception: ', '')),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        }
+                      }
+                    },
             ),
           ],
         ),

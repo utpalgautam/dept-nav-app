@@ -5,6 +5,8 @@ import '../widgets/email_field.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/floating_background.dart';
 import '../utils/validators.dart';
+import '../services/firebase_auth_service.dart';
+import 'home_screen.dart';
 
 class FacultyRegisterScreen extends StatefulWidget {
   const FacultyRegisterScreen({super.key});
@@ -14,6 +16,9 @@ class FacultyRegisterScreen extends StatefulWidget {
 }
 
 class _FacultyRegisterScreenState extends State<FacultyRegisterScreen> {
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  bool _isLoading = false;
+
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final officeController = TextEditingController();
@@ -108,15 +113,60 @@ class _FacultyRegisterScreenState extends State<FacultyRegisterScreen> {
               const SizedBox(height: 24),
               PrimaryButton(
                 text: "Create Account",
-                onPressed: () {
-                  if (!passwordsMatch || !emailValid) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please fix errors"),
-                      ),
-                    );
-                  }
-                },
+                isLoading: _isLoading,
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (!passwordsMatch || !emailValid) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Please fix errors"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final navigator = Navigator.of(context);
+
+                        setState(() {
+                          _isLoading = true;
+                        });
+
+                        try {
+                          await _authService.signUp(
+                            email: emailController.text.trim(),
+                            password: passwordController.text,
+                            role: 'faculty',
+                            additionalData: {
+                              'name': nameController.text.trim(),
+                              'officeAddress': officeController.text.trim(),
+                            },
+                          );
+
+                          navigator.pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const HomeScreen(showWelcomeDialog: true),
+                            ),
+                          );
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    e.toString().replaceAll('Exception: ', '')),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                          }
+                        }
+                      },
               ),
             ],
           ),

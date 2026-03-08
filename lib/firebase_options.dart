@@ -50,19 +50,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCuQQmWFSHZW1PpQWMsoDgXWPbJlRXzOWk',
-    appId: '1:577147636397:web:221dc78d4319217da15424',
-    messagingSenderId: '577147636397',
-    projectId: 'csed-navigation',
-    authDomain: 'csed-navigation.firebaseapp.com',
-    storageBucket: 'csed-navigation.firebasestorage.app',
+    apiKey: 'AIzaSyCbeVmvLy-Z33F956ksU1-vup3HQcoudvA',
+    appId: '1:536898116300:web:b4d6f061c933e09ab64069',
+    messagingSenderId: '536898116300',
+    projectId: 'departmentnvs',
+    authDomain: 'departmentnvs.firebaseapp.com',
+    storageBucket: 'departmentnvs.firebasestorage.app',
+    measurementId: 'G-L6LD0LE6MC',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCtbzD0jNumBvK4au8utT88GVuyin8Wly4',
-    appId: '1:577147636397:android:ab82de186e20c921a15424',
-    messagingSenderId: '577147636397',
-    projectId: 'csed-navigation',
-    storageBucket: 'csed-navigation.firebasestorage.app',
+    apiKey: 'AIzaSyAtl2cbJopo9Uzj5KPLFnV5JgueHGwR9RE',
+    appId: '1:536898116300:android:0c4ac9537bc01e90b64069',
+    messagingSenderId: '536898116300',
+    projectId: 'departmentnvs',
+    storageBucket: 'departmentnvs.firebasestorage.app',
   );
+
 }
