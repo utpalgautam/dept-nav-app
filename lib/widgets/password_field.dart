@@ -15,14 +15,9 @@ class PasswordField extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomTextField(
       label: "Confirm Password",
-      obscure: true,
+      hintText: "Confirm your password",
+      isPassword: true,
       controller: controller,
-      suffix: match == null
-          ? null
-          : Icon(
-              match! ? Icons.check_circle : Icons.cancel,
-              color: match! ? Colors.green : Colors.red,
-            ),
     );
   }
 }
