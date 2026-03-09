@@ -78,6 +78,22 @@ class FirebaseAuthService {
     await _auth.signOut();
   }
 
+  // Send Password Reset Email
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        throw Exception('No user found for that email.');
+      } else {
+        throw Exception(e.message ??
+            'An unknown error occurred while sending reset email.');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
   // Get Current User stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
