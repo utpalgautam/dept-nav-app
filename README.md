@@ -1,16 +1,18 @@
-# auth_app
+# Department Navigation App (dept-nav-app)
 
-A new Flutter project.
+## Problem Statement
+Navigating a large university or department campus can be challenging for new students, visitors, and even faculty members. The lack of a centralized, interactive map and directory often leads to wasted time and confusion. Our application aims to solve this by providing a comprehensive, digital navigation and directory system for department halls, offices, and facilities.
 
-## Getting Started
+## Technology Stack
+- **Frontend Framework:** Flutter (Dart)
+- **Backend Services:** Firebase (Authentication, Cloud Firestore, Cloud Storage)
+- **Authentication:** Google Sign-In, Email/Password
+- **Version Control:** Git & GitHub
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Contribution Table
+| Name | Roll Number / ID | Contribution | GitHub Commits/PRs |
+|---|---|---|---|
+| Rahul Chauhan | [Enter ID] | Setup Auth, Google Sign-In, Password Reset, DB Integration | [Link to Commits] |
+| [Student 2] | [Enter ID] | [Task] | [Link] |
+| [Student 3] | [Enter ID] | [Task] | [Link] |
+| [Student 4] | [Enter ID] | [Task] | [Link] |
