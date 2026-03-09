@@ -327,7 +327,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: controller.text.isEmpty ? null : controller.text,
+          initialValue: controller.text.isEmpty ? null : controller.text,
           validator: validator,
           style: const TextStyle(
             fontSize: 16,

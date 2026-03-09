@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +21,18 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase init failed: $e');
   }
+
+  // Initialize Google Sign-In singleton (required by google_sign_in ^7.x)
+  try {
+    await GoogleSignIn.instance.initialize(
+      serverClientId:
+          '816397169014-sfkr3uraovi2nn25iiaeetbknnrppkgf.apps.googleusercontent.com',
+    );
+    debugPrint('Google Sign-In initialized successfully');
+  } catch (e) {
+    debugPrint('Google Sign-In init failed: $e');
+  }
+
   runApp(const MyApp());
 }
 

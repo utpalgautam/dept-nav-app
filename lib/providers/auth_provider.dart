@@ -28,11 +28,19 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = null;
     } else {
       try {
-        _currentUser = await _authService.getCurrentUserModel();
+        // Try to load full profile from Firestore.
+        // If the doc doesn't exist yet (race: new Google user signs in and
+        // the Firestore write in signInWithGoogle() hasn't landed yet),
+        // fall back to a minimal model so the user always reaches HomeScreen.
+        _currentUser = await _authService.getCurrentUserModel() ??
+            UserModel(
+              uid: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              name: firebaseUser.displayName ?? firebaseUser.email ?? 'User',
+              userType: UserType.student,
+              createdAt: DateTime.now(),
+            );
       } catch (_) {
-        // Firestore read failed (e.g. security rules not set up yet).
-        // Fall back to a minimal model from Firebase Auth so the user
-        // still reaches the home page.
         _currentUser = UserModel(
           uid: firebaseUser.uid,
           email: firebaseUser.email ?? '',
@@ -45,7 +53,6 @@ class AuthProvider extends ChangeNotifier {
     _initialized = true;
     notifyListeners();
   }
-
 
   // ── Register ─────────────────────────────────────────────────────────────
   Future<bool> register({
@@ -90,6 +97,40 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         password: password,
       );
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ── Google Sign-In ────────────────────────────────────────────────────────
+  Future<bool> loginWithGoogle() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      _currentUser = await _authService.signInWithGoogle();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ── Guest Sign-In ─────────────────────────────────────────────────────────
+  Future<bool> loginAsGuest() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      _currentUser = await _authService.signInAsGuest();
       notifyListeners();
       return true;
     } catch (e) {

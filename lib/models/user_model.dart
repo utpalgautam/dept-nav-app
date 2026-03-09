@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserType { student, faculty, staff, admin}
+enum UserType { student, faculty, staff, admin }
 
 class UserModel {
   final String uid;
@@ -12,6 +12,7 @@ class UserModel {
   final DateTime createdAt;
   final DateTime? lastLogin;
   final String? profileImageUrl;
+  final bool isGuest;
   final List<String> savedLocations;
   final List<String> recentSearches;
   final Map<String, dynamic> preferences;
@@ -26,6 +27,7 @@ class UserModel {
     required this.createdAt,
     this.lastLogin,
     this.profileImageUrl,
+    this.isGuest = false,
     this.savedLocations = const [],
     this.recentSearches = const [],
     this.preferences = const {},
@@ -43,6 +45,7 @@ class UserModel {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastLogin: (data['lastLogin'] as Timestamp?)?.toDate(),
       profileImageUrl: data['profileImageUrl'],
+      isGuest: data['isGuest'] ?? false,
       savedLocations: List<String>.from(data['savedLocations'] ?? []),
       recentSearches: List<String>.from(data['recentSearches'] ?? []),
       preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
@@ -102,6 +105,7 @@ class UserModel {
     UserType? userType,
     DateTime? lastLogin,
     String? profileImageUrl,
+    bool? isGuest,
     List<String>? savedLocations,
     List<String>? recentSearches,
     Map<String, dynamic>? preferences,
@@ -116,6 +120,7 @@ class UserModel {
       createdAt: createdAt,
       lastLogin: lastLogin ?? this.lastLogin,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      isGuest: isGuest ?? this.isGuest,
       savedLocations: savedLocations ?? this.savedLocations,
       recentSearches: recentSearches ?? this.recentSearches,
       preferences: preferences ?? this.preferences,

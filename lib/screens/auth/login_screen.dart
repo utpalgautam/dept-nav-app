@@ -4,6 +4,8 @@ import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
+import '../home/home_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -31,12 +33,20 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<app_auth.AuthProvider>();
+    final navigator = Navigator.of(context);
     auth.clearError();
     final ok = await auth.login(
       email: _emailCtrl.text,
       password: _passwordCtrl.text,
     );
-    if (!ok && mounted) {
+    if (!mounted) return;
+    if (ok) {
+      // Clear the entire nav stack (OnboardingScreen → LoginScreen) and go Home
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.errorMessage ?? 'Login failed'),
@@ -71,8 +81,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.black),
                       onPressed: () {
-                        // Assuming you can go back, otherwise ignore or pop
-                        if (Navigator.canPop(context)) Navigator.pop(context);
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          // Go back to the starting OnboardingScreen manually
+                          // if the user arrived here directly on app start
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OnboardingScreen(),
+                            ),
+                          );
+                        }
                       },
                     ),
                   ),
@@ -117,30 +137,72 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    onPressed: () {
-                      // Google sign in logic placeholder
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // A simple G logo replacement if asset not exist
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
+                    onPressed: auth.isLoading
+                        ? null
+                        : () async {
+                            final authProv =
+                                context.read<app_auth.AuthProvider>();
+                            final navigator = Navigator.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            authProv.clearError();
+                            final ok = await authProv.loginWithGoogle();
+                            if (!mounted) return;
+                            if (ok) {
+                              // Clear stack (Onboarding → Login) and go Home
+                              navigator.pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const HomeScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    authProv.errorMessage ??
+                                        'Google Sign-In failed',
+                                  ),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          },
+                    child: auth.isLoading
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.black54,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Text('G', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Google',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -168,7 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
                     if (!v.contains('@')) return 'Invalid email';
                     return null;
                   },
@@ -207,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               _rememberMe = val;
                             });
                           },
-                          activeColor: Colors.black,
+                          activeThumbColor: Colors.black,
                         ),
                         const Text(
                           'Remember me',
@@ -252,8 +316,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 PrimaryButton(
                   label: 'Continue as Guest',
                   isSecondary: true,
-                  onTap: () {
-                    // Guest logic here
+                  isLoading: auth.isLoading,
+                  onTap: () async {
+                    final authProv = context.read<app_auth.AuthProvider>();
+                    final navigator = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
+                    authProv.clearError();
+                    final ok = await authProv.loginAsGuest();
+                    if (!mounted) return;
+                    if (ok) {
+                      navigator.pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => const HomeScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    } else {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            authProv.errorMessage ?? 'Guest sign-in failed',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: 32),

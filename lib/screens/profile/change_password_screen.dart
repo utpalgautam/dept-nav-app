@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 import '../../widgets/custom_text_field.dart';
+import '../auth/login_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -36,24 +37,27 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     } else {
       // Check if the error requires re-authentication, we can clear the session and go to login.
       if (auth.errorMessage?.contains('log out and log back in') ?? false) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${auth.errorMessage}'),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 4),
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${auth.errorMessage}'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        await auth.logout();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
           );
-          await auth.logout();
-          if (mounted) {
-             Navigator.of(context).popUntil((route) => route.isFirst);
-          }
+        }
       } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(auth.errorMessage ?? 'Failed to update password.'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.errorMessage ?? 'Failed to update password.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
   }
@@ -82,7 +86,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 // Back Button (Top Left)
                 Container(
                   decoration: const BoxDecoration(
-                    color: Colors.black, 
+                    color: Colors.black,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -106,7 +110,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Please enter your current password ans\nchoose a new one for Explorer.', 
+                  'Please enter your current password ans\nchoose a new one for Explorer.',
                   // Kept the typo "ans" from the image for exact match, but usually we'd fix it. Let's fix it for production quality, but if strict matching is required... I will match string exactly.
                   style: TextStyle(
                     fontSize: 15,
@@ -149,7 +153,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     });
                   },
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please confirm password';
+                    if (v == null || v.isEmpty) {
+                      return 'Please confirm password';
+                    }
                     if (v != _newPasswordCtrl.text) {
                       return 'Passwords do not match';
                     }
@@ -168,7 +174,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       foregroundColor: Colors.white,
                       elevation: 2,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30), // Pill shape from image
+                        borderRadius:
+                            BorderRadius.circular(30), // Pill shape from image
                       ),
                     ),
                     onPressed: isLoading ? null : _submit,
@@ -178,7 +185,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
