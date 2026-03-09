@@ -9,7 +9,7 @@ class AppConstants {
   static const String prefUserType = 'user_type';
   
   // GraphHopper Server
-  static const String graphHopperBaseUrl = 'http://127.0.0.1:8989'; // Changed to localhost for adb reverse
+  static const String graphHopperBaseUrl = 'http://172.21.32.169:8989'; // Changed to local IP for mobile access
   static const String graphHopperApiKey = ''; // Not needed for local
   
   // Map Defaults
