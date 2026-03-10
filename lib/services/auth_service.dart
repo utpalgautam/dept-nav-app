@@ -33,6 +33,17 @@ class AuthService {
     }
 
     try {
+      // 1. Check if a document already exists with this email
+      final existingDocs = await _db
+          .collection('users')
+          .where('email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+
+      // 2. We can optionally fetch sign-in methods to see if they're registered
+      // final methods = await _auth.fetchSignInMethodsForEmail(email.trim());
+      // if (methods.isNotEmpty && !methods.contains('password')) { ... }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -52,8 +63,33 @@ class AuthService {
         lastLogin: now,
       );
 
-      await _db.collection('users').doc(uid).set(userModel.toFirestore());
-      return userModel;
+      if (existingDocs.docs.isNotEmpty) {
+        // ── EXISTING DOCUMENT (e.g. from Google Sign-In) ──
+        final existingDoc = existingDocs.docs.first;
+        final targetDocId = existingDoc.id;
+
+        // Convert the new model to Map, but remove fields we shouldn't overwrite
+        Map<String, dynamic> updateData = userModel.toFirestore();
+        updateData
+            .remove('uid'); // Keep the original document's authoritative UID
+        updateData.remove('createdAt'); // Keep original registration date
+
+        // Link the new Email/Password Auth UID to this existing document
+        updateData['authUids'] = FieldValue.arrayUnion([targetDocId, uid]);
+
+        await _db
+            .collection('users')
+            .doc(targetDocId)
+            .set(updateData, SetOptions(merge: true));
+
+        // Return the merged document ensuring we use the authoritative targetDocId
+        final updatedDoc = await _db.collection('users').doc(targetDocId).get();
+        return UserModel.fromFirestore(updatedDoc.data()!, targetDocId);
+      } else {
+        // ── NO EXISTING DOCUMENT ──
+        await _db.collection('users').doc(uid).set(userModel.toFirestore());
+        return userModel;
+      }
     } on FirebaseAuthException catch (e) {
       throw _authErrorMessage(e.code);
     }
@@ -65,20 +101,18 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final credential = await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-
-      final uid = credential.user!.uid;
 
       final model = await getCurrentUserModel();
       if (model == null) {
         throw 'User profile not found. Please contact support or Administrator.';
       }
 
-      // Update lastLogin timestamp
-      await _db.collection('users').doc(uid).update({
+      // Update lastLogin timestamp using the authoritative document ID
+      await _db.collection('users').doc(model.uid).update({
         'lastLogin': Timestamp.fromDate(DateTime.now()),
       });
 
@@ -121,6 +155,29 @@ class AuthService {
       final docSnap = await _db.collection('users').doc(uid).get();
 
       if (!docSnap.exists) {
+        // Check if an Email/Password account already created a profile for this email
+        final emailQuery = await _db
+            .collection('users')
+            .where('email', isEqualTo: firebaseUser.email)
+            .limit(1)
+            .get();
+
+        if (emailQuery.docs.isNotEmpty) {
+          // ── EXISTING user from Email/Password — update lastLogin & link ──
+          final existingDoc = emailQuery.docs.first;
+          final targetUid = existingDoc.id;
+
+          await _db.collection('users').doc(targetUid).set({
+            'lastLogin': Timestamp.fromDate(now),
+            'authUids': FieldValue.arrayUnion([targetUid, uid]),
+            if (firebaseUser.photoURL != null)
+              'profileImageUrl': firebaseUser.photoURL,
+          }, SetOptions(merge: true));
+
+          final updatedDoc = await _db.collection('users').doc(targetUid).get();
+          return UserModel.fromFirestore(updatedDoc.data()!, targetUid);
+        }
+
         // ── NEW user — create Firestore profile ─────────────────────────────
         final userModel = UserModel(
           uid: uid,
@@ -177,16 +234,30 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return null;
 
-    final doc = await _db.collection('users').doc(user.uid).get();
+    var doc = await _db.collection('users').doc(user.uid).get();
+
+    // If exact UID doc doesn't exist, search by email to find original auth doc
+    if (!doc.exists && user.email != null && user.email!.isNotEmpty) {
+      final querySnapshot = await _db
+          .collection('users')
+          .where('email', isEqualTo: user.email)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        doc = querySnapshot.docs.first;
+      }
+    }
+
     if (!doc.exists || doc.data() == null) return null;
 
-    return UserModel.fromFirestore(doc.data()!, user.uid);
+    return UserModel.fromFirestore(doc.data()!, doc.id);
   }
 
   // ── Update Profile Image (Base64) ─────────────────────────────────────────
   Future<String> updateProfileImage(File imageFile) async {
-    final user = _auth.currentUser;
-    if (user == null) throw 'User not authenticated.';
+    final model = await getCurrentUserModel();
+    if (model == null) throw 'User not authenticated.';
 
     try {
       // Read file bytes and encode to base64
@@ -202,8 +273,8 @@ class AuthService {
       // Store the base64 string prefixed with data URI for easy decoding
       final String dataUri = 'data:image/jpeg;base64,$base64Image';
 
-      // Update Firestore document
-      await _db.collection('users').doc(user.uid).update({
+      // Update Firestore document using authoritative ID
+      await _db.collection('users').doc(model.uid).update({
         'profileImageUrl': dataUri,
       });
 
@@ -221,8 +292,9 @@ class AuthService {
     String? branch,
     String? year,
   }) async {
+    final model = await getCurrentUserModel();
     final user = _auth.currentUser;
-    if (user == null) throw 'User not authenticated.';
+    if (model == null || user == null) throw 'User not authenticated.';
 
     try {
       final Map<String, dynamic> updates = {
@@ -231,7 +303,7 @@ class AuthService {
         'year': year,
       };
 
-      await _db.collection('users').doc(user.uid).update(updates);
+      await _db.collection('users').doc(model.uid).update(updates);
 
       // Also update Firebase Auth display name
       await user.updateDisplayName(name);
