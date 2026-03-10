@@ -502,15 +502,6 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                         ? Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                onPressed: () => _deleteMap(building.id),
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.redAccent, size: 20),
-                                padding: const EdgeInsets.all(4),
-                                constraints: const BoxConstraints(
-                                    minWidth: 32, minHeight: 32),
-                              ),
-                              const SizedBox(width: 4),
                               ElevatedButton(
                                 onPressed: () {
                                   Navigator.push(
@@ -538,6 +529,24 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                                       fontWeight: FontWeight.w500,
                                       fontSize: 13),
                                 ),
+                              ),
+                              const SizedBox(width: 4),
+                              ElevatedButton(
+                                onPressed: () => _deleteMap(building.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  minimumSize: const Size(36, 36),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.all(6),
+                                ),
+                                child:
+                                    const Icon(Icons.delete_outline, size: 16),
                               ),
                             ],
                           )

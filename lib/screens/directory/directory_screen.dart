@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import '../../models/faculty_model.dart';
