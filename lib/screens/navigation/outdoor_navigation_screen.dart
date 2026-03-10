@@ -410,8 +410,9 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
     if (provider.currentRoute != null) {
       provider.startOutdoorNavigation();
     } else {
+      final errorMsg = provider.routeError ?? 'Unable to calculate route. Please try again.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to calculate route. Please try again.')),
+        SnackBar(content: Text(errorMsg)),
       );
     }
   }

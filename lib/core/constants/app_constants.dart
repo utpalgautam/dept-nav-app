@@ -14,8 +14,8 @@ class AppConstants {
   
   // Map Defaults
   static const double defaultMapZoom = 17.0;
-  static const double campusLat = 11.320; // NITC approximate latitude
-  static const double campusLng = 76.020; // NITC approximate longitude
+  static const double campusLat = 11.319972; // NITC exact latitude
+  static const double campusLng = 75.932639; // NITC exact longitude
   
   // Navigation
   static const double entryPointRadius = 20.0; // meters

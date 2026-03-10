@@ -27,6 +27,7 @@ class NavigationProvider extends ChangeNotifier {
   NavigationRoute? _currentRoute;
   String? _currentInstruction;
   double? _distanceToDestination;
+  String? _routeError;
   
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStreamSubscription;
@@ -42,6 +43,7 @@ class NavigationProvider extends ChangeNotifier {
   NavigationRoute? get currentRoute => _currentRoute;
   String? get currentInstruction => _currentInstruction;
   double? get distanceToDestination => _distanceToDestination;
+  String? get routeError => _routeError;
   Position? get currentPosition => _currentPosition;
 
   Future<void> previewRoute(
@@ -53,6 +55,7 @@ class NavigationProvider extends ChangeNotifier {
     _targetBuilding = targetBuilding;
     _targetEntryPoint = entryPoint;
     _isLoadingRoute = true;
+    _routeError = null;
     notifyListeners();
 
     // Get current location
@@ -77,14 +80,42 @@ class NavigationProvider extends ChangeNotifier {
     }
 
     if (_currentPosition != null) {
+      // If user is far from campus, clamp to campus center for testing
+      double distanceToCampus = Geolocator.distanceBetween(
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+        AppConstants.campusLat,
+        AppConstants.campusLng,
+      );
+      
+      if (distanceToCampus > 2000) {
+        _currentPosition = Position(
+          latitude: AppConstants.campusLat,
+          longitude: AppConstants.campusLng,
+          timestamp: DateTime.now(),
+          accuracy: 100.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        );
+      }
+
       final start = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
       final end = LatLng(destination.lat, destination.lng);
       
-      _currentRoute = await _graphHopperService.getRoute(start, end);
-      
-      if (_currentRoute != null && _currentRoute!.instructions.isNotEmpty) {
-        _currentInstruction = _currentRoute!.instructions.first.text;
-        _distanceToDestination = _currentRoute!.distance;
+      try {
+        _currentRoute = await _graphHopperService.getRoute(start, end);
+        
+        if (_currentRoute != null && _currentRoute!.instructions.isNotEmpty) {
+          _currentInstruction = _currentRoute!.instructions.first.text;
+          _distanceToDestination = _currentRoute!.distance;
+        }
+      } catch (e) {
+        _routeError = e.toString();
+        debugPrint('NavigationProvider Route Error: $_routeError');
       }
     }
     

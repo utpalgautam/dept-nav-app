@@ -48,7 +48,7 @@ class GraphHopperService {
       final url = Uri.parse(
           '$baseUrl/route?point=${start.latitude},${start.longitude}&point=${end.latitude},${end.longitude}&profile=foot&points_encoded=false&instructions=true');
 
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -76,13 +76,17 @@ class GraphHopperService {
             time: path['time'] ?? 0,
             instructions: instructions,
           );
+        } else {
+            throw Exception('No path found in response');
         }
       } else {
-        print('GraphHopper API Error: ${response.statusCode}');
+        final body = response.body;
+        print('GraphHopper API Error: ${response.statusCode} - $body');
+        throw Exception('Server returned ${response.statusCode}: $body');
       }
     } catch (e) {
       print('Error fetching GraphHopper route: $e');
+      rethrow;
     }
-    return null;
   }
 }
