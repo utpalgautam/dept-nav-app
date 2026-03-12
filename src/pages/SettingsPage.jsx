@@ -201,7 +201,7 @@ const SettingsPage = () => {
 
     return (
         <div>
-            <Header title="Settings" />
+            <Header title="Settings" searchDisabled={true} />
 
             {/* System Status Dashboard */}
             <div style={cardStyle}>

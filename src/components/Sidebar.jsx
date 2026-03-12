@@ -15,8 +15,7 @@ const Sidebar = () => {
   return (
     <div className="sidebar">
       <div className="logo">
-        <div className="badge">NA</div>
-        <div>NaviAdmin</div>
+        <div className="badge">D.</div>
       </div>
 
       <div className="nav-section">
@@ -50,31 +49,25 @@ const Sidebar = () => {
         </ul>
       </div>
 
+      {/* Removed Management section */}
+
       <div className="nav-section">
-        <div className="nav-title">Management</div>
         <ul className="nav-links">
           <li>
-            <NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-              <FaChartBar /> Analytics
+            <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+              <FaUsers />
             </NavLink>
           </li>
         </ul>
       </div>
 
-      <div className="nav-section">
-        <div className="nav-title">System</div>
-        <ul className="nav-links">
-          <li>
-            <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-              <FaUsers /> User Management
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-              <FaCog /> Settings
-            </NavLink>
-          </li>
-        </ul>
+      <div className="sidebar-bottom">
+        <FaCog className="sidebar-bottom-icon" />
+        <svg className="sidebar-bottom-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
       </div>
     </div>
   );

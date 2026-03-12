@@ -73,10 +73,6 @@ const FacultyTable = ({ facultyData, buildings = [], onEdit, onDelete }) => {
           </div>
         ))}
       </div>
-
-      <div style={{ padding: '1rem', color: '#9aa4af', fontSize: '0.85rem' }}>
-        Showing {facultyData.length} records
-      </div>
     </div>
   );
 };

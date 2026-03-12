@@ -1,21 +1,7 @@
 import { useState } from 'react';
 import { FaTrash } from 'react-icons/fa';
 
-const HallsLabsDirectory = ({ hallsData, searchTerm, onAdd, onEdit, onDelete }) => {
-  const [sortAsc, setSortAsc] = useState(true);
-
-  let processedData = hallsData.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.building.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  processedData.sort((a, b) => {
-    return sortAsc
-      ? a.name.localeCompare(b.name)
-      : b.name.localeCompare(a.name);
-  });
-
+const HallsLabsDirectory = ({ processedData, onAdd, onEdit, onDelete, sortAsc, onSortToggle }) => {
   const getAvatarIcon = (category) => {
     if (category === 'LAB') {
       return (
@@ -55,7 +41,7 @@ const HallsLabsDirectory = ({ hallsData, searchTerm, onAdd, onEdit, onDelete }) 
   return (
     <div>
       <div className="hl-toolbar">
-        <button className="hl-btn-sort" onClick={() => setSortAsc(!sortAsc)}>
+        <button className="hl-btn-sort" onClick={onSortToggle}>
           Sort {sortAsc ? '↓' : '↑'}
         </button>
         <button className="hl-btn-green" onClick={onAdd}>
@@ -73,7 +59,7 @@ const HallsLabsDirectory = ({ hallsData, searchTerm, onAdd, onEdit, onDelete }) 
 
         {processedData.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
-            No halls or labs found matching your search.
+            No halls or labs found.
           </div>
         ) : (
           processedData.map((item) => (
@@ -122,10 +108,6 @@ const HallsLabsDirectory = ({ hallsData, searchTerm, onAdd, onEdit, onDelete }) 
             </div>
           ))
         )}
-
-        <div style={{ padding: '1.5rem', textAlign: 'left', color: '#6b7280', fontSize: '0.95rem' }}>
-          Showing 1 to {Math.min(processedData.length, 20)} of {processedData.length}
-        </div>
       </div>
     </div>
   );

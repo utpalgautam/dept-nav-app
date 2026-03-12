@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import FacultyTable from '../components/FacultyTable';
 import FacultyForm from '../components/FacultyForm';
+import Header from '../components/Header';
+import Pagination from '../components/Pagination';
 import { fetchAllFaculty, addFaculty, updateFaculty, deleteFaculty } from '../services/facultyService';
 import { fetchAllBuildings } from '../services/buildingService';
 
@@ -15,6 +17,8 @@ const FacultyManagement = () => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortAsc, setSortAsc] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   useEffect(() => {
     loadData();
@@ -80,29 +84,14 @@ const FacultyManagement = () => {
   if (viewState === 'add' || viewState === 'edit') {
     return (
       <div className="fac-page">
-        <div className="fac-header-row" style={{ marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button className="bf-back-btn" onClick={() => { setViewState('list'); setSelectedFaculty(null); }}>
-              ←
-            </button>
-            <h1 className="fac-title">{viewState === 'add' ? 'Add New faculty' : 'Edit faculty'}</h1>
-          </div>
-          <div className="fac-header-actions">
-            <div className="buildings-search-wrapper">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buildings-search-icon" style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)' }}>
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input
-                className="buildings-search-input"
-                style={{ paddingLeft: '2.8rem' }}
-                placeholder="Search..."
-              />
-            </div>
-            <div className="buildings-avatar">
-              <div className="buildings-avatar-circle" style={{ background: '#e0ecfc', color: '#e0ecfc' }}></div>
-            </div>
-          </div>
+        <Header
+          title={viewState === 'add' ? 'Add New faculty' : 'Edit faculty'}
+          searchDisabled={true}
+        />
+        <div className="fac-header-row" style={{ marginBottom: '1.5rem', justifyContent: 'flex-start' }}>
+          <button className="bf-back-btn" onClick={() => { setViewState('list'); setSelectedFaculty(null); }}>
+            ←
+          </button>
         </div>
         <FacultyForm
           faculty={selectedFaculty}
@@ -116,28 +105,14 @@ const FacultyManagement = () => {
 
   return (
     <div className="fac-page">
-      {/* Header Row */}
-      <div className="fac-header-row">
-        <h1 className="fac-title">Faculty</h1>
-        <div className="fac-header-actions">
-          <div className="buildings-search-wrapper">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buildings-search-icon" style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)' }}>
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              className="buildings-search-input"
-              style={{ paddingLeft: '2.8rem' }}
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="buildings-avatar">
-            <div className="buildings-avatar-circle" style={{ background: '#e0ecfc', color: '#e0ecfc' }}></div>
-          </div>
-        </div>
-      </div>
+      <Header
+        title="Faculty"
+        searchTerm={searchQuery}
+        onSearchChange={e => {
+          setSearchQuery(e.target.value);
+          setCurrentPage(1);
+        }}
+      />
 
       {error && (
         <div style={{ padding: '1rem', marginBottom: '1rem', background: '#fee', border: '1px solid #fcc', borderRadius: '0.375rem', color: '#c33' }}>
@@ -159,12 +134,20 @@ const FacultyManagement = () => {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#9aa4af' }}>Loading ...</div>
       ) : (
-        <FacultyTable
-          facultyData={processedData}
-          buildings={buildings}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <>
+          <FacultyTable
+            facultyData={processedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+            buildings={buildings}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+          <Pagination 
+            currentPage={currentPage}
+            totalItems={processedData.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
     </div>
   );

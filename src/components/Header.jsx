@@ -1,32 +1,30 @@
 // src/components/Header.jsx
-import { FaBell } from 'react-icons/fa';
+import { FaSearch } from 'react-icons/fa';
 
-const Header = ({ title }) => {
+const Header = ({ title, searchTerm, onSearchChange, searchDisabled = false }) => {
   return (
-    <div className="header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <h1>{title}</h1>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <input className="form-control" placeholder="Search buildings, users, or routes..." style={{ width: 320, background: '#f8fafc' }} />
+    <div className="db-header">
+      <h1 className="db-title">{title}</h1>
+      <div className="db-header-right">
+        <div className="db-search-bar">
+          <FaSearch className="db-search-icon" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={onSearchChange}
+            disabled={searchDisabled}
+          />
         </div>
-
-        <button className="btn btn-outline" title="Notifications" style={{ padding: '0.65rem', borderRadius: '50%', border: 'none', background: 'transparent' }}>
-          <FaBell size={18} color="var(--gray-color)" />
-        </button>
-
-        <div className="user-profile">
-          <div className="user-avatar">AR</div>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontWeight: 600 }}>Alex Rivera</div>
-            <div style={{ fontSize: '0.825rem', color: 'var(--muted-gray)' }}>Super Admin</div>
-          </div>
+        <div className="db-avatar-img">
+          <img
+            src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&auto=format&fit=crop"
+            alt="Profile"
+          />
         </div>
       </div>
     </div>
   );
 };
 
-export default Header;
+export default Header;

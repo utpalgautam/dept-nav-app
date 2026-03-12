@@ -1,90 +1,105 @@
 // src/services/analyticsService.js
 import { db } from './firebaseConfig';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 
 const SEARCH_LOGS_COLLECTION = 'searchLogs';
 
 /**
- * Get total searches grouped by building name.
- * Falls back to sample data if collection is empty/missing.
+ * Get total searches grouped by building name with timeframe filtering.
+ * @param {string} timeframe - 'day', 'week', or 'month'
  */
-export async function getSearchesPerBuilding() {
+export async function getSearchesPerBuilding(timeframe = 'week') {
     try {
         const snapshot = await getDocs(collection(db, SEARCH_LOGS_COLLECTION));
-        if (snapshot.empty) return getSampleBuildingData();
+        
+        const now = new Date();
+        let cutoff = new Date();
+        if (timeframe === 'day') cutoff.setDate(now.getDate() - 1);
+        else if (timeframe === 'week') cutoff.setDate(now.getDate() - 7);
+        else if (timeframe === 'month') cutoff.setMonth(now.getMonth() - 1);
 
         const counts = {};
         snapshot.forEach(doc => {
             const data = doc.data();
-            const building = data.buildingName || data.buildingId || 'Unknown';
-            counts[building] = (counts[building] || 0) + 1;
+            const ts = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
+            
+            if (ts >= cutoff) {
+                const building = data.buildingName || data.buildingId || 'Unknown';
+                counts[building] = (counts[building] || 0) + 1;
+            }
         });
 
+        // If no real data satisfies the filter, return empty but let Dashboard handle buildings
         return Object.entries(counts)
             .map(([name, searches]) => ({ name, searches }))
-            .sort((a, b) => b.searches - a.searches)
-            .slice(0, 6);
+            .sort((a, b) => b.searches - a.searches);
     } catch (err) {
         console.error('Error fetching searches per building:', err);
-        return getSampleBuildingData();
+        return [];
     }
 }
 
 /**
- * Get searches per day for the last N days.
- * Falls back to sample data if collection is empty/missing.
+ * Get searches per day for the last 7 days.
  */
 export async function getSearchesPerDay(days = 7) {
     try {
         const snapshot = await getDocs(collection(db, SEARCH_LOGS_COLLECTION));
-        if (snapshot.empty) return getSampleDailyData(days);
-
+        
         const now = new Date();
-        const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        now.setHours(23, 59, 59, 999);
+        const cutoff = new Date();
+        cutoff.setDate(now.getDate() - (days - 1));
+        cutoff.setHours(0, 0, 0, 0);
+
         const dailyCounts = {};
 
-        // Initialize all days
-        for (let i = days - 1; i >= 0; i--) {
-            const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-            const key = d.toLocaleDateString('en-US', { weekday: 'short' });
-            dailyCounts[key] = 0;
+        // Initialize all 7 days including today
+        for (let i = 0; i < days; i++) {
+            const d = new Date(cutoff);
+            d.setDate(cutoff.getDate() + i);
+            const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            dailyCounts[key] = {
+                display: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                count: 0,
+                sortKey: d.getTime()
+            };
         }
 
         snapshot.forEach(doc => {
             const data = doc.data();
             const ts = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
-            if (ts >= cutoff) {
-                const key = ts.toLocaleDateString('en-US', { weekday: 'short' });
-                if (dailyCounts[key] !== undefined) {
-                    dailyCounts[key]++;
+            
+            if (ts >= cutoff && ts <= now) {
+                const key = ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                if (dailyCounts[key]) {
+                    dailyCounts[key].count++;
                 }
             }
         });
 
-        return Object.entries(dailyCounts).map(([day, searches]) => ({ day, searches }));
+        return Object.entries(dailyCounts)
+            .map(([date, data]) => ({ 
+                name: data.display, 
+                date,
+                searches: data.count,
+                sortKey: data.sortKey 
+            }))
+            .sort((a, b) => a.sortKey - b.sortKey);
     } catch (err) {
         console.error('Error fetching searches per day:', err);
         return getSampleDailyData(days);
     }
 }
 
-function getSampleBuildingData() {
-    return [
-        { name: 'Main Building', searches: 45 },
-        { name: 'CSED Building', searches: 32 },
-        { name: 'Library', searches: 28 },
-        { name: 'Admin Block', searches: 15 },
-    ];
-}
-
 function getSampleDailyData(days = 7) {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const now = new Date();
     const result = [];
     for (let i = days - 1; i >= 0; i--) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
         result.push({
-            day: dayNames[d.getDay()],
+            name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+            date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             searches: Math.floor(Math.random() * 40) + 10
         });
     }

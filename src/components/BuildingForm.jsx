@@ -172,7 +172,7 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
                 department: formData.department,
                 latitude: formData.latitude,
                 longitude: formData.longitude,
-                totalFloors: formData.totalFloors,
+                totalFloors: formData.totalFloors, // Still sending data if needed, but not in form
                 imageUrl: formData.imageUrl,
                 imageFile: formData.imageFile,
                 // Strip out the UI-only _local preview properties before sending to service
@@ -223,226 +223,213 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
                 </div>
             </div>
 
-            {error && <div className="bf-alert bf-alert-error">{error}</div>}
+            <div className="bf-form-container">
+                {error && <div className="bf-alert bf-alert-error">{error}</div>}
 
-            <div className="bf-layout">
+                <div className="bf-layout">
 
-                {/* ========================================================= */}
-                {/* LEFT PANEL: Building Details                              */}
-                {/* ========================================================= */}
-                <div className="bf-panel bf-left-panel">
-                    <h2 className="bf-panel-title">{isEditing ? 'Edit Building Details' : 'Building Details'}</h2>
+                    {/* ========================================================= */}
+                    {/* LEFT PANEL: Building Details                              */}
+                    {/* ========================================================= */}
+                    <div className="bf-panel bf-left-panel">
+                        <h2 className="bf-panel-title">{isEditing ? 'Edit Building Details' : 'Building Details'}</h2>
 
-                    <div className="bf-form-group">
-                        <label className="bf-label">Building Name</label>
-                        <input
-                            type="text"
-                            name="name"
-                            className="bf-input"
-                            placeholder="e.g. Main Building"
-                            value={formData.name}
-                            onChange={handleMainChange}
-                        />
-                    </div>
-
-                    <div className="bf-form-group">
-                        <label className="bf-label">Department</label>
-                        <div className="bf-select-wrapper">
-                            <select
-                                name="department"
-                                className="bf-select"
-                                value={formData.department}
-                                onChange={handleMainChange}
-                            >
-                                <option value="" disabled>Select Department</option>
-                                <option value="Computer Science and Engineering">Computer Science and Engineering</option>
-                                <option value="Electrical Engineering">Electrical Engineering</option>
-                                <option value="Mechanical Engineering">Mechanical Engineering</option>
-                                <option value="Civil Engineering">Civil Engineering</option>
-                                <option value="Applied Sciences">Applied Sciences</option>
-                                <option value="Administration">Administration</option>
-                                <option value="Library">Library</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <span className="bf-select-caret">▾</span>
-                        </div>
-                    </div>
-
-                    <div className="bf-row">
                         <div className="bf-form-group">
-                            <label className="bf-label">Latitude</label>
+                            <label className="bf-label">Building Name</label>
                             <input
-                                type="number"
-                                step="any"
-                                name="latitude"
+                                type="text"
+                                name="name"
                                 className="bf-input"
-                                placeholder="0.00000"
-                                value={formData.latitude}
+                                placeholder="e.g. Main Building"
+                                value={formData.name}
                                 onChange={handleMainChange}
                             />
                         </div>
+
                         <div className="bf-form-group">
-                            <label className="bf-label">Longitude</label>
-                            <input
-                                type="number"
-                                step="any"
-                                name="longitude"
-                                className="bf-input"
-                                placeholder="0.00000"
-                                value={formData.longitude}
-                                onChange={handleMainChange}
-                            />
+                            <label className="bf-label">Department</label>
+                            <div className="bf-select-wrapper">
+                                <select
+                                    name="department"
+                                    className="bf-select"
+                                    value={formData.department}
+                                    onChange={handleMainChange}
+                                >
+                                    <option value="" disabled>Select Department</option>
+                                    <option value="Computer Science and Engineering">Computer Science and Engineering</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Applied Sciences">Applied Sciences</option>
+                                    <option value="Administration">Administration</option>
+                                    <option value="Library">Library</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <span className="bf-select-caret">▾</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="bf-row">
-                        <div className="bf-form-group">
-                            <label className="bf-label">Total Floors</label>
-                            <input
-                                type="number"
-                                name="totalFloors"
-                                className="bf-input"
-                                placeholder="e.g. 3"
-                                min="1"
-                                value={formData.totalFloors}
-                                onChange={handleMainChange}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="bf-form-group bf-photo-group">
-                        <label className="bf-label">Building Photo</label>
-                        <ImageUploadZone
-                            label="Upload Image"
-                            fileName={formData.imageFileName}
-                            previewUrl={formData.imageUrl}
-                            onChange={handleMainImageSelect}
-                        />
-                    </div>
-                </div>
-
-
-                {/* ========================================================= */}
-                {/* RIGHT PANEL: Entry Points                                 */}
-                {/* ========================================================= */}
-                <div className="bf-panel bf-right-panel">
-                    <h2 className="bf-panel-title">{isEditing ? 'Edit Entry Points' : 'Add Entry Points'}</h2>
-
-                    {/* Entry Point Input Form */}
-                    <div className="bf-ep-builder">
-                        <div className="bf-ep-builder-left">
+                        <div className="bf-row">
                             <div className="bf-form-group">
-                                <label className="bf-label">Label</label>
+                                <label className="bf-label">Latitude</label>
                                 <input
-                                    type="text"
-                                    name="label"
+                                    type="number"
+                                    step="any"
+                                    name="latitude"
                                     className="bf-input"
-                                    placeholder="e.g. Center"
-                                    value={epForm.label}
-                                    onChange={handleEpChange}
+                                    placeholder="0.00000"
+                                    value={formData.latitude}
+                                    onChange={handleMainChange}
                                 />
                             </div>
-                            <div className="bf-row" style={{ marginTop: '0.8rem' }}>
-                                <div className="bf-form-group">
-                                    <label className="bf-label">Latitude</label>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        name="latitude"
-                                        className="bf-input"
-                                        placeholder="0.00000"
-                                        value={epForm.latitude}
-                                        onChange={handleEpChange}
-                                    />
-                                </div>
-                                <div className="bf-form-group">
-                                    <label className="bf-label">Longitude</label>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        name="longitude"
-                                        className="bf-input"
-                                        placeholder="0.00000"
-                                        value={epForm.longitude}
-                                        onChange={handleEpChange}
-                                    />
-                                </div>
+                            <div className="bf-form-group">
+                                <label className="bf-label">Longitude</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    name="longitude"
+                                    className="bf-input"
+                                    placeholder="0.00000"
+                                    value={formData.longitude}
+                                    onChange={handleMainChange}
+                                />
                             </div>
                         </div>
-                        <div className="bf-ep-builder-right">
+
+
+                        <div className="bf-form-group bf-photo-group">
+                            <label className="bf-label">Building Photo</label>
                             <ImageUploadZone
                                 label="Upload Image"
-                                fileName={epForm.imageFileName}
-                                onChange={handleEpImageSelect}
+                                fileName={formData.imageFileName}
+                                previewUrl={formData.imageUrl}
+                                onChange={handleMainImageSelect}
                             />
                         </div>
                     </div>
 
-                    <button className="bf-btn-dark bf-add-ep-btn" onClick={wrapAddEntryPoint}>
-                        Add entry point
-                    </button>
 
-                    <hr className="bf-divider" />
+                    {/* ========================================================= */}
+                    {/* RIGHT PANEL: Entry Points                                 */}
+                    {/* ========================================================= */}
+                    <div className="bf-panel bf-right-panel">
+                        <h2 className="bf-panel-title">{isEditing ? 'Edit Entry Points' : 'Add Entry Points'}</h2>
 
-                    {/* List of Added Entry Points */}
-                    <div className="bf-ep-list">
-                        {entryPoints.map((ep, idx) => {
-                            // Determine preview image source
-                            const thumbSrc = ep._localPreview || ep.imageUrl;
-
-                            return (
-                                <div key={ep.id} className="bf-ep-card">
-                                    <div className="bf-ep-card-info">
-                                        <div className="bf-ep-meta">
-                                            <span className="bf-ep-label-title">Label</span>
-                                            <span className="bf-ep-label-val">{ep.label}</span>
-                                        </div>
-                                        <div className="bf-ep-coords">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                                <circle cx="12" cy="10" r="3"></circle>
-                                            </svg>
-                                            <div className="bf-ep-coords-text">
-                                                <div>{Number(ep.latitude).toFixed(6)}</div>
-                                                <div>{Number(ep.longitude).toFixed(6)}</div>
-                                            </div>
-                                        </div>
+                        {/* Entry Point Input Form */}
+                        <div className="bf-ep-builder">
+                            <div className="bf-ep-builder-left">
+                                <div className="bf-form-group">
+                                    <label className="bf-label">Label</label>
+                                    <input
+                                        type="text"
+                                        name="label"
+                                        className="bf-input"
+                                        placeholder="e.g. Center"
+                                        value={epForm.label}
+                                        onChange={handleEpChange}
+                                    />
+                                </div>
+                                <div className="bf-row" style={{ marginTop: '0.8rem' }}>
+                                    <div className="bf-form-group">
+                                        <label className="bf-label">Latitude</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            name="latitude"
+                                            className="bf-input"
+                                            placeholder="0.00000"
+                                            value={epForm.latitude}
+                                            onChange={handleEpChange}
+                                        />
                                     </div>
-
-                                    <div className="bf-ep-card-right">
-                                        {thumbSrc ? (
-                                            <img src={thumbSrc} alt={ep.label} className="bf-ep-thumb" />
-                                        ) : (
-                                            <div className="bf-ep-thumb-placeholder" />
-                                        )}
-                                        <button className="bf-ep-remove" onClick={() => removeEntryPoint(idx)}>
-                                            <FaTimes size={10} color="#111" />
-                                        </button>
+                                    <div className="bf-form-group">
+                                        <label className="bf-label">Longitude</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            name="longitude"
+                                            className="bf-input"
+                                            placeholder="0.00000"
+                                            value={epForm.longitude}
+                                            onChange={handleEpChange}
+                                        />
                                     </div>
                                 </div>
-                            );
-                        })}
-
-                        {entryPoints.length === 0 && (
-                            <div style={{ color: '#9aa4af', fontSize: '0.85rem', textAlign: 'center', marginTop: '1rem' }}>
-                                No entry points added yet.
                             </div>
-                        )}
+                            <div className="bf-ep-builder-right">
+                                <ImageUploadZone
+                                    label="Upload Image"
+                                    fileName={epForm.imageFileName}
+                                    onChange={handleEpImageSelect}
+                                />
+                            </div>
+                        </div>
+
+                        <button className="bf-btn-dark bf-add-ep-btn" onClick={wrapAddEntryPoint}>
+                            Add entry point
+                        </button>
+
+                        <hr className="bf-divider" />
+
+                        {/* List of Added Entry Points */}
+                        <div className="bf-ep-list">
+                            {entryPoints.map((ep, idx) => {
+                                // Determine preview image source
+                                const thumbSrc = ep._localPreview || ep.imageUrl;
+
+                                return (
+                                    <div key={ep.id} className="bf-ep-card">
+                                        <div className="bf-ep-card-info">
+                                            <div className="bf-ep-meta">
+                                                <span className="bf-ep-label-title">Label</span>
+                                                <span className="bf-ep-label-val">{ep.label}</span>
+                                            </div>
+                                            <div className="bf-ep-coords">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                                    <circle cx="12" cy="10" r="3"></circle>
+                                                </svg>
+                                                <div className="bf-ep-coords-text">
+                                                    <div>{Number(ep.latitude).toFixed(6)}</div>
+                                                    <div>{Number(ep.longitude).toFixed(6)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bf-ep-card-right">
+                                            {thumbSrc ? (
+                                                <img src={thumbSrc} alt={ep.label} className="bf-ep-thumb" />
+                                            ) : (
+                                                <div className="bf-ep-thumb-placeholder" />
+                                            )}
+                                            <button className="bf-ep-remove" onClick={() => removeEntryPoint(idx)}>
+                                                <FaTimes size={10} color="#111" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {entryPoints.length === 0 && (
+                                <div style={{ color: '#9aa4af', fontSize: '0.85rem', textAlign: 'center', marginTop: '1rem' }}>
+                                    No entry points added yet.
+                                </div>
+                            )}
+                        </div>
+
                     </div>
 
                 </div>
 
+                {/* Main Save Action spanning full width below panels */}
+                <button
+                    className="bf-save-main-btn"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                >
+                    {loading ? 'Saving securely...' : 'Save Building Details'}
+                </button>
             </div>
-
-            {/* Main Save Action spanning full width below panels */}
-            <button
-                className="bf-btn-dark bf-save-main-btn"
-                onClick={handleSubmit}
-                disabled={loading}
-            >
-                {loading ? 'Saving securely...' : 'Save Building Details'}
-            </button>
-
         </div>
     );
 };

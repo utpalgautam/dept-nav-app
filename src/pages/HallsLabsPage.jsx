@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from '../components/Header';
-import { FaSearch, FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
 import HallsLabsDirectory from '../components/HallsLabsDirectory';
 import HallsLabsForm from '../components/HallsLabsForm';
+import Pagination from '../components/Pagination';
 import { fetchAllHalls, addHall, updateHall, deleteHall } from '../services/hallsService';
 import { fetchAllLabs, addLab, updateLab, deleteLab } from '../services/labsService';
 import { fetchAllBuildings } from '../services/buildingService';
@@ -17,6 +18,9 @@ const HallsLabsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   useEffect(() => {
     loadData();
@@ -96,6 +100,28 @@ const HallsLabsPage = () => {
     setSelectedItem(null);
   };
 
+  const getProcessedData = () => {
+    let filtered = hallsData.filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.building.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.type || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    filtered.sort((a, b) => {
+      return sortAsc
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name);
+    });
+
+    return filtered;
+  };
+
+  const processedData = getProcessedData();
+  const paginatedData = processedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   if (viewState === 'add' || viewState === 'edit') {
     const pageTitle = viewState === 'add'
       ? "Add New Halls/Labs"
@@ -103,20 +129,11 @@ const HallsLabsPage = () => {
 
     return (
       <div>
-        <div className="hl-header-row">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-            <button type="button" className="hl-back-btn" onClick={handleCancel}>
-              <FaArrowLeft size={16} />
-            </button>
-            <h1>{pageTitle}</h1>
-          </div>
-          <div className="hl-header-controls">
-            <div className="hl-search-bar">
-              <FaSearch />
-              <input type="text" placeholder="Search..." disabled />
-            </div>
-            <div className="hl-user-avatar"></div>
-          </div>
+        <Header title={pageTitle} searchDisabled={true} />
+        <div className="hl-header-row" style={{ marginBottom: '1.5rem', justifyContent: 'flex-start' }}>
+          <button type="button" className="hl-back-btn" onClick={handleCancel}>
+            <FaArrowLeft size={16} />
+          </button>
         </div>
 
         <HallsLabsForm
@@ -131,22 +148,14 @@ const HallsLabsPage = () => {
 
   return (
     <div>
-      {/* Custom Header with Search & Avatar */}
-      <div className="hl-header-row">
-        <h1>Halls/Labs</h1>
-        <div className="hl-header-controls">
-          <div className="hl-search-bar">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="hl-user-avatar"></div>
-        </div>
-      </div>
+      <Header
+        title="Halls/Labs"
+        searchTerm={searchTerm}
+        onSearchChange={e => {
+          setSearchTerm(e.target.value);
+          setCurrentPage(1);
+        }}
+      />
 
       {error && (
         <div style={{ padding: '1rem', marginBottom: '1rem', background: '#fee', border: '1px solid #fcc', borderRadius: '0.375rem', color: '#c33' }}>
@@ -157,13 +166,22 @@ const HallsLabsPage = () => {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted-gray)' }}>Loading directory...</div>
       ) : (
-        <HallsLabsDirectory
-          hallsData={hallsData}
-          searchTerm={searchTerm}
-          onAdd={handleAdd}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <>
+          <HallsLabsDirectory
+            processedData={paginatedData}
+            onAdd={handleAdd}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            sortAsc={sortAsc}
+            onSortToggle={() => setSortAsc(!sortAsc)}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalItems={processedData.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
     </div>
   );

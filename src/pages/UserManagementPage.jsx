@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import Pagination from '../components/Pagination';
 import { fetchAllUsers, updateUserStatus, resetUserPassword, addUser, updateUser, deleteUser } from '../services/userService';
 import UserForm from '../components/UserForm';
 
@@ -13,6 +14,8 @@ const UserManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortAsc, setSortAsc] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   useEffect(() => {
     loadUsers();
@@ -32,10 +35,12 @@ const UserManagementPage = () => {
   };
 
   const getFilteredAndSortedUsers = () => {
-    let filtered = users.filter(user => {
+    let filtered = (users || []).filter(user => {
+      const name = user?.name || '';
+      const email = user?.email || '';
       const matchesSearch =
-        (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (user.name && user.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
 
@@ -114,25 +119,14 @@ const UserManagementPage = () => {
 
   return (
     <div className="user-page">
-      <div className="user-header-row">
-        <h1 className="user-title">User Management</h1>
-        <div className="user-controls">
-          <div className="user-search-wrapper">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }}>
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              type="text"
-              className="user-search-input"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="user-avatar-placeholder"></div>
-        </div>
-      </div>
+      <Header
+        title="User Management"
+        searchTerm={searchQuery}
+        onSearchChange={e => {
+          setSearchQuery(e.target.value);
+          setCurrentPage(1);
+        }}
+      />
 
       <div className="user-toolbar">
         <button className="user-sort-btn" onClick={() => setSortAsc(!sortAsc)}>
@@ -162,7 +156,9 @@ const UserManagementPage = () => {
             ) : filteredUsers.length === 0 ? (
               <tr><td colSpan="5" style={{ textAlign: 'center' }}>No users found.</td></tr>
             ) : (
-              filteredUsers.map(user => (
+              filteredUsers
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map(user => (
                 <tr key={user.id}>
                   <td>
                     <div className="user-name-cell">
@@ -209,16 +205,12 @@ const UserManagementPage = () => {
         </table>
       </div>
 
-      <div className="user-pagination">
-        <span>Showing 1 to {filteredUsers.length} of {users.length}</span>
-        <div className="user-pages">
-          <span>&lt;</span>
-          <div className="page-num active">1</div>
-          <div className="page-num">2</div>
-          <div className="page-num">3</div>
-          <span>&gt;</span>
-        </div>
-      </div>
+      <Pagination 
+        currentPage={currentPage}
+        totalItems={filteredUsers.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };

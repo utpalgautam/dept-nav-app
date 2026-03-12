@@ -5,8 +5,8 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyBCc1qPfgaAaLju7RWiiSCyOjjuFu-VrmQ",
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "dept-nav-app",
+  apiKey: "AIzaSyBCc1qPfgaAaLju7RWiiSCyOjjuFu-VrmQ",
+  projectId: "dept-nav-app",
   authDomain: "dept-nav-app.firebaseapp.com",
   databaseURL: "https://dept-nav-app.firebaseio.com",
   storageBucket: "dept-nav-app.appspot.com",

@@ -106,12 +106,15 @@ const BuildingManagement = () => {
   };
 
   // Derive filtered + sorted buildings
-  const processedBuildings = buildings
-    .filter(b => b.name?.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => sortAsc
-      ? (a.name || '').localeCompare(b.name || '')
-      : (b.name || '').localeCompare(a.name || '')
-    );
+  const processedBuildings = (buildings || [])
+    .filter(b => (b?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const nameA = a?.name || '';
+      const nameB = b?.name || '';
+      return sortAsc
+        ? nameA.localeCompare(nameB)
+        : nameB.localeCompare(nameA);
+    });
 
   if (viewState === 'details' && selectedBuilding) {
     return (
@@ -135,32 +138,11 @@ const BuildingManagement = () => {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="buildings-page-header">
-        <h1 className="buildings-page-title">Buildings</h1>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {/* Search */}
-          <div className="buildings-search-wrapper">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="buildings-search-icon" style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)' }}>
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              className="buildings-search-input"
-              style={{ paddingLeft: '2.8rem' }}
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          {/* User Avatar */}
-          <div className="buildings-avatar">
-            <div className="buildings-avatar-circle">AR</div>
-          </div>
-        </div>
-      </div>
+      <Header
+        title="Buildings"
+        searchTerm={searchQuery}
+        onSearchChange={e => setSearchQuery(e.target.value)}
+      />
 
       {error && (
         <div style={{

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaSearch } from 'react-icons/fa';
+import Header from '../components/Header';
 import RouteManagement from '../components/RouteManagement';
 import { fetchAllBuildings } from '../services/buildingService';
 import { fetchFloors } from '../services/floorService';
@@ -10,6 +10,7 @@ const InteractiveRoutePage = () => {
     const [floors, setFloors] = useState([]);
     const [selectedFloorNumber, setSelectedFloorNumber] = useState('');
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const loadBuildings = async () => {
@@ -48,23 +49,11 @@ const InteractiveRoutePage = () => {
 
     return (
         <div className="ir-page-container">
-            <div className="buildings-page-header">
-                <h1 className="buildings-page-title">Interactive Route</h1>
-
-                <div className="buildings-search-wrapper">
-                    <div className="buildings-search-icon">
-                        <FaSearch />
-                    </div>
-                    <input
-                        type="text"
-                        className="buildings-search-input"
-                        placeholder="Search..."
-                        disabled
-                    />
-                </div>
-
-                <div className="buildings-avatar-circle">AR</div>
-            </div>
+            <Header
+                title="Interactive Route"
+                searchTerm={searchTerm}
+                onSearchChange={e => setSearchTerm(e.target.value)}
+            />
 
             <div className="ir-controls-row">
                 <div className="ir-select-pill">

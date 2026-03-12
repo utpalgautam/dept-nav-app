@@ -22,8 +22,8 @@ export const addPOI = async (buildingId, floorNumber, poi) => {
         await updateDoc(floorDocRef, {
             pois: arrayUnion({
                 name: poi.name,
-                x: Number(poi.x),
-                y: Number(poi.y),
+                x: poi.x,
+                y: poi.y,
                 createdAt: new Date().toISOString()
             })
         });

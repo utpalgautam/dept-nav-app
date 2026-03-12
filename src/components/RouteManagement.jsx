@@ -111,8 +111,8 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
     if (!currentFloorMap || !viewportRef.current) return;
 
     const rect = viewportRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
 
     const newPoint = { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) };
 
@@ -241,7 +241,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
       const dy = pts[i].y - pts[i - 1].y;
       dist += Math.sqrt(dx * dx + dy * dy);
     }
-    return parseFloat(dist.toFixed(1));
+    return parseFloat(dist.toFixed(4));
   };
 
   // Circle Marker with Hover Tooltip
@@ -251,11 +251,10 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
     const vp = viewportRef.current;
     const vpW = vp?.offsetWidth || 1;
     const vpH = vp?.offsetHeight || 1;
-    const aspect = vpW / vpH;
     // To make a perfect circle, use ellipse with adjusted radii
     const baseR = 5; // radius in pixels we want on screen
-    const rx = (baseR / vpW) * 100 / scale;
-    const ry = (baseR / vpH) * 100 / scale;
+    const rx = (baseR / vpW) / scale;
+    const ry = (baseR / vpH) / scale;
 
     return (
       <g className="poi-marker-group" style={{ pointerEvents: 'all' }}>
@@ -268,8 +267,8 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
         />
         {label && (
           <foreignObject
-            x={x - 5} y={y - 4}
-            width="10" height="3"
+            x={x - (10 / vpW)} y={y - (15 / vpH)}
+            width={120 / vpW} height={40 / vpH}
             style={{ overflow: 'visible', pointerEvents: 'none' }}
           >
             <div className="poi-tooltip">
@@ -328,7 +327,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
 
                 {/* Overlay */}
                 <svg
-                  viewBox="0 0 100 100"
+                  viewBox="0 0 1 1"
                   preserveAspectRatio="none"
                   style={{
                     position: 'absolute',
@@ -342,7 +341,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
                       points={fullRoutePoints.map(p => `${p.x},${p.y}`).join(' ')}
                       fill="none"
                       stroke="#1c1c1e"
-                      strokeWidth={2 / scale}
+                      strokeWidth={0.02 / scale}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       style={{ vectorEffect: 'non-scaling-stroke' }}
@@ -362,7 +361,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
 
                   {points.map((p, i) => (
                     activeTab === 'route' ? (
-                      <circle key={i} cx={p.x} cy={p.y} r={1.2 / scale} fill="#1c1c1e" stroke="white" strokeWidth={0.3 / scale} />
+                      <circle key={i} cx={p.x} cy={p.y} r={0.012 / scale} fill="#1c1c1e" stroke="white" strokeWidth={0.003 / scale} />
                     ) : (
                       <POIMarker key={i} x={p.x} y={p.y} color="#1c1c1e" label="New POI" />
                     )

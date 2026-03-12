@@ -133,7 +133,7 @@ const AnalyticsPage = () => {
 
     return (
         <div>
-            <Header title="Analytics & Reports" />
+            <Header title="Analytics & Reports" searchDisabled={true} />
 
             {/* Key Metrics Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>

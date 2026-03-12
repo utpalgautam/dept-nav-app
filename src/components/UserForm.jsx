@@ -152,6 +152,25 @@ const UserForm = ({ user, onSave, onCancel }) => {
                                 className="user-form-input"
                             />
                         </div>
+
+                        {/* Status */}
+                        <div className="user-form-group">
+                            <label>Status</label>
+                            <div className="user-form-select-wrapper">
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="user-form-input user-form-select"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                                <div className="user-form-select-icon">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

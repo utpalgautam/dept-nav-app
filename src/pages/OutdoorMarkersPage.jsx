@@ -5,7 +5,7 @@ import OutdoorMarkers from '../components/OutdoorMarkers';
 const OutdoorMarkersPage = () => {
   return (
     <div>
-      <Header title="Outdoor Markers" />
+      <Header title="Outdoor Markers" searchDisabled={true} />
       <p style={{ marginBottom: '1.5rem', color: 'var(--gray-color)' }}>
         Configure campus locations
       </p>
