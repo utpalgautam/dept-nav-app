@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FaArrowLeft, FaLayerGroup, FaCloudUploadAlt, FaMapMarkerAlt } from 'react-icons/fa';
 import { fetchFloors, addFloor, deleteFloor } from '../services/floorService';
 import { updateBuilding } from '../services/buildingService';
+import Header from './Header';
 
 // ── helper: read SVG file as text ──────────────────────────────────────────
 const readSvgFile = (file) =>
@@ -77,14 +78,14 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
     const [error, setError] = useState('');
 
     // Add floor form state
-    const [addForm, setAddForm] = useState({ floorNumber: '', name: '', mapFile: null, mapFileName: '', svgContent: null, mapFileObject: null });
+    const [addForm, setAddForm] = useState({ floorNumber: '', name: '', description: '', mapFile: null, mapFileName: '', svgContent: null, mapFileObject: null });
     const [addLoading, setAddLoading] = useState(false);
     const [addError, setAddError] = useState('');
     const [addSuccess, setAddSuccess] = useState('');
 
     // Edit floor form state
     const [editFloorId, setEditFloorId] = useState('');
-    const [editForm, setEditForm] = useState({ floorNumber: '', name: '', mapFile: null, mapFileName: '', svgContent: null, mapFileObject: null });
+    const [editForm, setEditForm] = useState({ floorNumber: '', name: '', description: '', mapFile: null, mapFileName: '', svgContent: null, mapFileObject: null });
     const [editLoading, setEditLoading] = useState(false);
     const [editError, setEditError] = useState('');
     const [editSuccess, setEditSuccess] = useState('');
@@ -122,13 +123,14 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
             setEditForm({
                 floorNumber: f.floorNumber,
                 name: f.name || '',
+                description: f.description || '',
                 mapFileName: f.svgMapUrl || f.svgContent ? 'Existing Map' : '',
                 svgContent: f.svgContent || null,
                 mapFileObject: null,
                 svgMapUrl: f.svgMapUrl || null,
             });
         } else {
-            setEditForm({ floorNumber: '', name: '', mapFileName: '', svgContent: null, mapFileObject: null });
+            setEditForm({ floorNumber: '', name: '', description: '', mapFileName: '', svgContent: null, mapFileObject: null });
         }
         setEditError('');
         setEditSuccess('');
@@ -156,11 +158,12 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
             await addFloor(building.id, {
                 floorNumber: addForm.floorNumber,
                 name: addForm.name,
+                description: addForm.description,
                 mapFileObject: addForm.mapFileObject,
                 svgContent: addForm.svgContent,
             });
             setAddSuccess('Floor added successfully!');
-            setAddForm({ floorNumber: '', name: '', mapFile: null, mapFileName: '', svgContent: null, mapFileObject: null });
+            setAddForm({ floorNumber: '', name: '', description: '', mapFile: null, mapFileName: '', svgContent: null, mapFileObject: null });
             await loadFloors();
         } catch (err) {
             setAddError(err.message || 'Failed to add floor');
@@ -181,6 +184,7 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
             await addFloor(building.id, {
                 floorNumber: editForm.floorNumber,
                 name: editForm.name,
+                description: editForm.description,
                 mapFileObject: editForm.mapFileObject,
                 svgContent: editForm.svgContent,
                 svgMapUrl: editForm.svgMapUrl || null,
@@ -204,49 +208,38 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
         <div className="bd-page">
 
             {/* ── Page Header ─────────────────────────────────────── */}
-            <div className="bd-topbar">
-                <div className="bd-topbar__left">
-                    <button className="bd-back-btn" onClick={onBack}>
-                        <FaArrowLeft size={14} />
-                    </button>
-                    <h1 className="bd-topbar__title">{building.name}</h1>
-                </div>
-                <div className="bd-topbar__search">
-                    <span className="bd-topbar__search-icon">🔍</span>
-                    <input className="bd-topbar__search-input" placeholder="Search..." />
-                </div>
-                <div className="bd-topbar__avatar">AR</div>
+            <div className="bd-header-container">
+                <button className="bd-back-btn" onClick={onBack}>
+                    <FaArrowLeft size={14} />
+                </button>
+                <Header title={building.name} />
             </div>
-
-            {/* ── Building Info Card (dark) ────────────────────────── */}
-            <div className="bd-infocard">
-                <div className="bd-infocard__thumb">
-                    {building.imageUrl
-                        ? <img src={building.imageUrl} alt={building.name} />
-                        : <div className="bd-infocard__thumb-placeholder"><FaLayerGroup size={20} color="#9aa4af" /></div>}
-                </div>
-                <div className="bd-infocard__text">
-                    <div className="bd-infocard__floors">
-                        <FaLayerGroup size={13} color="#9aa4af" />
-                        {totalFloors} Floor{totalFloors !== 1 ? 's' : ''}
-                    </div>
-                    <div className="bd-infocard__coords">
-                        <FaMapMarkerAlt size={11} color="#9aa4af" />
-                        {lat}, {lng}
-                    </div>
-                </div>
-                <button className="bd-infocard__edit-btn" onClick={onEdit}>Edit</button>
-            </div>
-
-            {error && (
-                <div className="bd-error">{error}</div>
-            )}
 
             {/* ── Two-Column Layout ────────────────────────────────── */}
             <div className="bd-layout">
 
-                {/* LEFT: Floor selector + SVG Preview */}
+                {/* LEFT: Building Info + Floor Selector + SVG Preview */}
                 <div className="bd-left">
+                    {/* ── Building Info Card (dark) ────────────────────────── */}
+                    <div className="bd-infocard">
+                        <div className="bd-infocard__thumb">
+                            {building.imageUrl
+                                ? <img src={building.imageUrl} alt={building.name} />
+                                : <div className="bd-infocard__thumb-placeholder"><FaLayerGroup size={20} color="#9aa4af" /></div>}
+                        </div>
+                        <div className="bd-infocard__text">
+                            <div className="bd-infocard__floors">
+                                <FaLayerGroup size={13} color="#9aa4af" />
+                                {totalFloors} Floor{totalFloors !== 1 ? 's' : ''}
+                            </div>
+                            <div className="bd-infocard__coords">
+                                <FaMapMarkerAlt size={11} color="#9aa4af" />
+                                {lat}, {lng}
+                            </div>
+                        </div>
+                        <button className="bd-infocard__edit-btn" onClick={onEdit}>Edit</button>
+                    </div>
+
                     {/* Floor Selector Dropdown */}
                     <div className="bd-floor-select-wrap">
                         <select
@@ -322,15 +315,16 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
                             </div>
 
                             <div className="bd-form__group">
-                                <label className="bd-form__label">Floor Number</label>
+                                <label className="bd-form__label">Description</label>
                                 <input
                                     className="bd-form__input"
-                                    type="number"
+                                    type="text"
                                     placeholder="e.g. 1"
-                                    value={addForm.floorNumber}
-                                    onChange={e => setAddForm(p => ({ ...p, floorNumber: e.target.value }))}
+                                    value={addForm.description}
+                                    onChange={e => setAddForm(p => ({ ...p, description: e.target.value }))}
                                 />
                             </div>
+
 
                             <div className="bd-form__group">
                                 <label className="bd-form__label">Floor Map (SVG only)</label>
@@ -371,6 +365,7 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
                                             setEditForm({
                                                 floorNumber: f.floorNumber,
                                                 name: f.name || '',
+                                                description: f.description || '',
                                                 mapFileName: (f.svgMapUrl || f.svgContent) ? 'Existing Map' : '',
                                                 svgContent: f.svgContent || null,
                                                 mapFileObject: null,
@@ -410,15 +405,16 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
                             </div>
 
                             <div className="bd-form__group">
-                                <label className="bd-form__label">Floor Number</label>
+                                <label className="bd-form__label">Description</label>
                                 <input
                                     className="bd-form__input"
-                                    type="number"
+                                    type="text"
                                     placeholder="e.g. 1"
-                                    value={editForm.floorNumber}
-                                    onChange={e => setEditForm(p => ({ ...p, floorNumber: e.target.value }))}
+                                    value={editForm.description}
+                                    onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
                                 />
                             </div>
+
 
                             <div className="bd-form__group">
                                 <label className="bd-form__label">Floor Map (SVG only)</label>
