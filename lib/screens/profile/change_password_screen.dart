@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 import '../../widgets/custom_text_field.dart';
+import '../auth/forgot_password_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -13,8 +14,10 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _oldPasswordCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
+  bool _obscureOld = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
@@ -22,7 +25,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<app_auth.AuthProvider>();
     auth.clearError();
-    final ok = await auth.changePassword(newPassword: _newPasswordCtrl.text);
+    final ok = await auth.changePassword(
+      oldPassword: _oldPasswordCtrl.text,
+      newPassword: _newPasswordCtrl.text,
+    );
     if (!mounted) return;
 
     if (ok) {
@@ -60,6 +66,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   void dispose() {
+    _oldPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
     super.dispose();
@@ -106,8 +113,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Please enter your current password ans\nchoose a new one for Explorer.', 
-                  // Kept the typo "ans" from the image for exact match, but usually we'd fix it. Let's fix it for production quality, but if strict matching is required... I will match string exactly.
+                  'Please enter your current password and\nchoose a new one for your account.', 
                   style: TextStyle(
                     fontSize: 15,
                     color: Color(0xFF888888),
@@ -115,6 +121,47 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                 ),
                 const SizedBox(height: 48),
+
+                // Old Password Field
+                CustomTextField(
+                  label: 'Current Password',
+                  hintText: '**********',
+                  controller: _oldPasswordCtrl,
+                  isPassword: true,
+                  isVisible: !_obscureOld,
+                  onVisibilityToggle: () {
+                    setState(() {
+                      _obscureOld = !_obscureOld;
+                    });
+                  },
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Current password is required';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // New Password Field
                 CustomTextField(
