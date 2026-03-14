@@ -38,7 +38,28 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context); // Go back after changing
+      
+      // Show dialog and log out
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Password Changed'),
+          content: const Text('Your password has been successfully updated. For security reasons, you have been logged out. Please log in again with your new password.'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx); // Close dialog
+                await auth.logout();
+                if (mounted) {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
+              },
+              child: const Text('Login Again', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
+      );
     } else {
       // Check if the error requires re-authentication, we can clear the session and go to login.
       if (auth.errorMessage?.contains('log out and log back in') ?? false) {
@@ -203,7 +224,27 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 64),
+                const SizedBox(height: 32),
+
+                // Warning Label
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, size: 18, color: Color(0xFF888888)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'After successfully changing your password, you will be automatically logged out and required to log in again.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
                 // Update Password Button (matches image exactly, pill shape, black)
                 SizedBox(
