@@ -168,31 +168,42 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
   Widget _buildMapContent() {
     // If we have actual floor data
     if (_currentFloorData != null) {
+      Widget? mapWidget;
       if (_currentFloorData!.mapImageUrl != null && _currentFloorData!.mapImageUrl!.isNotEmpty) {
-        return _buildInteractiveLayer(
-          child: Image.network(
-            _currentFloorData!.mapImageUrl!,
-            fit: BoxFit.contain,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return const Center(child: CircularProgressIndicator(color: Colors.black));
-            },
-            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.error, size: 40)),
-          ),
+        mapWidget = Image.network(
+          _currentFloorData!.mapImageUrl!,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(child: CircularProgressIndicator(color: Colors.black));
+          },
+          errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.error, size: 40)),
         );
       } else if (_currentFloorData!.svgMapUrl != null && _currentFloorData!.svgMapUrl!.isNotEmpty) {
-        return _buildInteractiveLayer(
-          child: SvgPicture.network(
-            _currentFloorData!.svgMapUrl!,
-            fit: BoxFit.contain,
-            placeholderBuilder: (_) => const Center(child: CircularProgressIndicator(color: Colors.black)),
-          ),
+        mapWidget = SvgPicture.network(
+          _currentFloorData!.svgMapUrl!,
+          fit: BoxFit.contain,
+          placeholderBuilder: (_) => const Center(child: CircularProgressIndicator(color: Colors.black)),
         );
       } else if (_currentFloorData!.svgMapData != null && _currentFloorData!.svgMapData!.isNotEmpty) {
+        mapWidget = SvgPicture.string(
+          _currentFloorData!.svgMapData!,
+          fit: BoxFit.contain,
+        );
+      }
+
+      if (mapWidget != null) {
         return _buildInteractiveLayer(
-          child: SvgPicture.string(
-            _currentFloorData!.svgMapData!,
-            fit: BoxFit.contain,
+          child: Stack(
+            children: [
+              mapWidget,
+              if (_currentFloorData!.pois.isNotEmpty)
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _POIPainter(pois: _currentFloorData!.pois),
+                  ),
+                ),
+            ],
           ),
         );
       }
@@ -240,4 +251,53 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
       ),
     );
   }
+}
+
+class _POIPainter extends CustomPainter {
+  final List<POI> pois;
+
+  _POIPainter({required this.pois});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pointPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    const textStyle = TextStyle(
+      color: Colors.black,
+      fontSize: 8,
+      fontWeight: FontWeight.bold,
+      backgroundColor: Colors.white70,
+    );
+
+    for (final poi in pois) {
+      final offset = Offset(poi.x * size.width, poi.y * size.height);
+      
+      // Draw point
+      canvas.drawCircle(offset, 4.0, pointPaint);
+      canvas.drawCircle(offset, 4.0, borderPaint);
+
+      // Draw label
+      final textPainter = TextPainter(
+        text: TextSpan(text: poi.name, style: textStyle),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      
+      // Position label slightly above the point
+      textPainter.paint(
+        canvas,
+        Offset(offset.dx - (textPainter.width / 2), offset.dy - 12),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

@@ -36,6 +36,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
   bool _isMapReady = false;
   bool _showTurnByTurn = false;
   bool _isTransitioningToIndoor = false;
+  Symbol? _userMarker;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +63,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
               zoom: AppConstants.defaultMapZoom,
             ),
             styleString: MapStyle.osm,
-            myLocationEnabled: _isMapReady, // Only enable if map is ready, and we can turn it off
+            myLocationEnabled: _isMapReady && !navProvider.isNavigating,
             myLocationRenderMode: _isMapReady ? MyLocationRenderMode.compass : MyLocationRenderMode.normal,
             compassEnabled: true,
             attributionButtonPosition: AttributionButtonPosition.bottomLeft,
@@ -155,12 +156,12 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
               isNavigating: navProvider.isNavigating,
               isLoading: navProvider.isLoadingRoute,
               instruction: widget.targetBuilding?.name ?? 'Destination',
-              distance: navProvider.currentRoute != null
-                    ? '${navProvider.currentRoute!.distance.toStringAsFixed(0)}m'
-                    : '...',
-              time: navProvider.currentRoute != null
-                    ? '${(navProvider.currentRoute!.time / 60000).ceil()} min'
-                    : '...',
+              distance: navProvider.distanceToDestination != null
+                    ? '${navProvider.distanceToDestination!.toStringAsFixed(0)}m'
+                    : (navProvider.currentRoute != null ? '${navProvider.currentRoute!.distance.toStringAsFixed(0)}m' : '...'),
+              time: navProvider.isNavigating
+                    ? (navProvider.remainingTime != null ? '${navProvider.remainingTime} min' : '...')
+                    : (navProvider.currentRoute != null ? '${(navProvider.currentRoute!.time / 60000).ceil()} min' : '...'),
               onStartNavigation: () => _startNavigation(navProvider),
               onStopNavigation: () => _stopNavigation(navProvider),
               onConfirmArrival: () => navProvider.switchToIndoorNavigation(),
@@ -280,43 +281,79 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
   void _onProviderUpdated() {
      final provider = Provider.of<NavigationProvider>(context, listen: false);
      if (provider.currentRoute != null && _isMapReady) {
-         _drawRoute(provider.currentRoute!.coordinates);
+         _drawRoute(provider.remainingRouteCoordinates);
      }
      
-     // Optionally follow camera
-     if (provider.isNavigating && provider.currentPosition != null && _isMapReady) {
+     // Update user marker and camera
+     if (provider.isNavigating && provider.snappedPosition != null && _isMapReady) {
+         _updateUserMarker(provider.snappedPosition!, provider.currentPosition?.heading ?? 0);
+         
          _mapController?.animateCamera(
             CameraUpdate.newCameraPosition(
                CameraPosition(
-                  target: LatLng(provider.currentPosition!.latitude, provider.currentPosition!.longitude),
+                  target: provider.snappedPosition!,
                   zoom: 18,
-                  bearing: provider.currentPosition!.heading,
+                  bearing: provider.currentPosition?.heading ?? 0,
                   tilt: 45,
                )
-            )
+            ),
+            duration: const Duration(milliseconds: 500),
          );
+     } else if (!provider.isNavigating && _userMarker != null) {
+         _mapController?.removeSymbol(_userMarker!);
+         _userMarker = null;
      }
+  }
+
+  void _updateUserMarker(LatLng position, double heading) async {
+      if (_mapController == null) return;
+      
+      if (_userMarker == null) {
+          try {
+              _userMarker = await _mapController!.addSymbol(
+                  SymbolOptions(
+                      geometry: position,
+                      iconImage: 'assets/icons/navigation_marker.png', // We'll assume this exists or use building fallback
+                      iconSize: 0.8,
+                      iconRotate: heading,
+                  ),
+              );
+          } catch (e) {
+              debugPrint('Error adding user marker: $e');
+          }
+      } else {
+          _mapController!.updateSymbol(_userMarker!, SymbolOptions(
+              geometry: position,
+              iconRotate: heading,
+          ));
+      }
   }
 
   void _drawRoute(List<LatLng> points) async {
       if (_mapController == null || points.isEmpty) return;
       
       try {
+          // Store current provider to check navigation state
+          final provider = Provider.of<NavigationProvider>(context, listen: false);
+          
           await _mapController!.clearLines();
           await _mapController!.addLine(
               LineOptions(
                   geometry: points,
-                  lineColor: '#2196F3',
-                  lineWidth: 6.0,
+                  lineColor: '#1A73E8', // Match Google blue
+                  lineWidth: 8.0,
                   lineOpacity: 0.8,
+                  lineJoin: 'round',
               )
           );
           
-          // Fit bounds to show entire route
-          LatLngBounds bounds = _getBounds(points);
-          _mapController!.animateCamera(
-            CameraUpdate.newLatLngBounds(bounds, top: 150, left: 50, right: 50, bottom: 250),
-          );
+          // Fit bounds ONLY if not navigating (i.e., in preview mode)
+          if (!provider.isNavigating) {
+              LatLngBounds bounds = _getBounds(points);
+              _mapController!.animateCamera(
+                CameraUpdate.newLatLngBounds(bounds, top: 150, left: 50, right: 50, bottom: 250),
+              );
+          }
       } catch (e) {
           debugPrint('Error drawing route on Maplibre: $e');
       }
@@ -410,8 +447,9 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
     if (provider.currentRoute != null) {
       provider.startOutdoorNavigation();
     } else {
+      final errorMsg = provider.routeError ?? 'Unable to calculate route. Please try again.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to calculate route. Please try again.')),
+        SnackBar(content: Text(errorMsg)),
       );
     }
   }
@@ -433,9 +471,9 @@ class MapStyle {
     "sources": {
       "osm": {
         "type": "raster",
-        "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        "tiles": ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"],
         "tileSize": 256,
-        "attribution": "© OpenStreetMap contributors"
+        "attribution": "© OpenStreetMap contributors © CARTO"
       }
     },
     "layers": [
@@ -444,7 +482,7 @@ class MapStyle {
         "type": "raster",
         "source": "osm",
         "minzoom": 0,
-        "maxzoom": 19
+        "maxzoom": 20
       }
     ]
   }
