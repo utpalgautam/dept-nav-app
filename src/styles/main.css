@@ -1655,6 +1655,15 @@ body {
 .fac-page {
   padding: 0;
   color: #111;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.hl-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .fac-header-row {
@@ -3473,7 +3482,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding-top: 1rem;
-  margin-top: 0.5rem;
+  margin-top: auto;
   border-top: 1px solid #e5e7eb;
 }
 
@@ -3657,19 +3666,20 @@ body {
 .user-form-actions-footer {
   margin-top: 2rem;
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
+  justify-content: center;
 }
 
 .user-form-save-btn {
   background: #1c1c1e;
   color: white;
   border: none;
-  border-radius: 16px;
+  border-radius: 999px;
   padding: 1rem 2.5rem;
   font-size: 1.05rem;
   font-weight: 500;
   cursor: pointer;
-  width: 320px;
+  flex: 0 1 650px;
   transition: opacity 0.2s;
 }
 
@@ -3686,12 +3696,12 @@ body {
   background: white;
   color: #111;
   border: 1px solid #cbd5e1;
-  border-radius: 16px;
+  border-radius: 999px;
   padding: 1rem 2.5rem;
   font-size: 1.05rem;
   font-weight: 500;
   cursor: pointer;
-  width: 240px;
+  flex: 0 1 650px;
   transition: background 0.2s;
 }
 

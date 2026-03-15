@@ -163,7 +163,7 @@ const UserForm = ({ user, onSave, onCancel }) => {
                     className="user-form-save-btn"
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? 'Saving...' : (isEditMode ? 'Save' : 'Save Faculty Member')}
+                    {isSubmitting ? 'Saving...' : 'Save'}
                 </button>
                 <button
                     type="button"

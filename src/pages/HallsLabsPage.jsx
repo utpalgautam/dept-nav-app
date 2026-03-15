@@ -146,7 +146,7 @@ const HallsLabsPage = () => {
   }
 
   return (
-    <div>
+    <div className="hl-page">
       <Header
         title="Halls/Labs"
         searchTerm={searchTerm}

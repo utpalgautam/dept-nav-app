@@ -310,12 +310,12 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                     </div>
                 </div>
 
-                <div className="hl-form-actions" style={{ justifyContent: item ? 'flex-start' : 'center', width: '100%' }}>
+                <div className="hl-form-actions" style={{ justifyContent: 'center', width: '100%' }}>
                     <button
                         type="submit"
                         className="hl-btn-save"
                         disabled={loading}
-                        style={{ flex: item ? '0 1 250px' : '1' }}
+                        style={{ flex: item ? '0 1 650px' : '1' }}
                     >
                         {loading ? 'Saving...' : (item ? 'Save' : `Save ${isLab ? 'Lab' : 'Hall'}`)}
                     </button>
@@ -325,7 +325,7 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                             className="hl-btn-cancel"
                             onClick={onCancel}
                             disabled={loading}
-                            style={{ flex: '0 1 250px' }}
+                            style={{ flex: '0 1 650px' }}
                         >
                             Cancel
                         </button>
