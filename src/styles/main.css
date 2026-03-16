@@ -2399,12 +2399,12 @@ body {
 
 /* Interactive Route Page Styles */
 .ir-page-container {
-  padding: 1.5rem 2.5rem;
+  padding: 0rem 2.5rem 1.5rem; /* Removed top padding to align with Header */
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   background: white;
 }
 
@@ -2447,11 +2447,11 @@ body {
 .ir-main-layout {
   display: grid;
   grid-template-columns: 1fr 340px;
-  /* Fixed side panel width */
   gap: 1.5rem;
-  height: 720px;
+  height: calc(100vh - 200px); /* Responsive height */
+  min-height: 500px;
   align-items: stretch;
-  min-height: 0;
+  overflow: hidden; /* Prevent layout overflow */
 }
 
 .ir-map-container {
@@ -2478,7 +2478,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 1rem;
+  padding: 0.5rem;
   /* Allow flex to shrink if needed */
 }
 
@@ -2578,13 +2578,29 @@ body {
   background: #F6F6F8;
   border-radius: 28px;
   border: 1.5px solid #93A3B8;
-  padding: 0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   position: relative;
-  padding-top: 1.5rem;
+}
+
+.ir-side-header {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ir-side-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1c1c1e;
+}
+
+.ir-side-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  padding-bottom: 3rem;
 }
 
 .ir-tabs-toggle {
@@ -2750,7 +2766,293 @@ body {
 
 .ir-pill-close:hover {
   opacity: 1;
+}
+
+/* Graph Specific Styles */
+.ir-btn-mode {
+  padding: 0.8rem 1.25rem;
+  border-radius: 999px;
+  border: 1.5px solid #cbd5e1;
+  background: white;
+  color: #1c1c1e;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ir-btn-mode.active {
+  background: #1c1c1e;
+  color: white;
+  border-color: #1c1c1e;
+}
+
+.no-floor-msg {
+  text-align: center;
+  padding: 4rem;
+  color: #94a3b8;
+  font-size: 1.1rem;
+}
+
+.node-details {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.details-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: #f1f5f9;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #4a5568;
+  transition: all 0.2s;
+  z-index: 5;
+}
+
+.details-close-btn:hover {
+  background: #e2e8f0;
+  color: #111;
+}
+
+.node-details h4 {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.node-details p {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #4a5568;
+}
+
+.node-details .actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.graph-stats label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.pills-container .pill {
+  padding: 0.35rem 0.85rem;
+  background: #f0f7ff;
+  color: #4a5568;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+
+.pills-container .pill:hover {
+  background: #e0f0ff;
+}
+
+.pills-container .pill.active {
+  background: #1c1c1e;
+  color: white;
+}
+
+.pills-container .pill .del-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: #4a5568;
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.pills-container .pill .del-btn:hover {
+  opacity: 1;
   color: #ef4444;
+}
+
+.edge-pill {
+  padding: 0.4rem 0.6rem !important;
+  font-size: 0.75rem !important;
+  display: flex !important;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0;
+  flex: 0 1 calc(20% - 0.4rem); /* Approx 5 per row */
+  min-width: fit-content;
+}
+
+.edge-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edge-pill .del-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.edge-pill .del-btn:hover {
+  color: #ef4444;
+}
+
+.faded {
+  opacity: 0 !important;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.ir-map-viewport.graph-view-active {
+  background: #ffffff !important;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+}
+
+.ir-map-viewport.graph-view-active svg text {
+  fill: #1c1c1e !important;
+}
+
+.ir-map-viewport.graph-view-active line {
+  stroke: #000000 !important;
+  stroke-width: 0.005 !important; /* Thinner lines */
+}
+
+.ir-map-viewport.graph-view-active circle {
+  stroke: #ffffff !important;
+  fill: #000000 !important;
+  r: 0.008 !important; /* Smaller nodes in CSS too */
+}
+
+.edge-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.edge-item .del-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* Modal Overlay & Content */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 450px;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.modal-header h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.modal-footer button {
+  flex: 1;
+}
+
+.ir-btn-danger {
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  padding: 0.8rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .ir-pills-grid {

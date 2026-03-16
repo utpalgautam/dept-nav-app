@@ -8,7 +8,8 @@ import {
   FaChartBar,
   FaCog,
   FaUniversity,
-  FaDoorOpen
+  FaDoorOpen,
+  FaLayerGroup
 } from 'react-icons/fa';
 
 const Sidebar = () => {
@@ -44,6 +45,11 @@ const Sidebar = () => {
           <li>
             <NavLink to="/routing" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
               <FaRoute /> Routing
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/indoor-graph" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+              <FaLayerGroup /> Indoor Graph
             </NavLink>
           </li>
         </ul>
