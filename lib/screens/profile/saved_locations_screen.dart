@@ -128,6 +128,38 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
     }
   }
 
+  Future<void> _clearAllSavedLocations() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All'),
+        content: const Text('Are you sure you want to clear all saved locations?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final auth = context.read<app_auth.AuthProvider>();
+    final user = auth.currentUser;
+    if (user != null) {
+       await _firestoreService.clearAllSavedLocations(user.uid);
+       setState(() {
+         _allSavedLocations.clear();
+         user.savedLocations.clear();
+       });
+    }
+  }
+
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query.toLowerCase();
@@ -206,6 +238,18 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
                       ),
                     ),
                   ),
+                  if (_allSavedLocations.isNotEmpty)
+                    GestureDetector(
+                      onTap: _clearAllSavedLocations,
+                      child: const Text(
+                        'Clear all',
+                        style: TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 24),
