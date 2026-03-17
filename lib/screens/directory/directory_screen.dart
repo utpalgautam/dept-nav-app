@@ -82,123 +82,148 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       body: Stack(
         children: [
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-
-                  // --- Header (Back btn + Title) ---
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.arrow_back,
-                              color: Colors.white, size: 20),
-                          onPressed: () {
-                            if (Navigator.canPop(context)) {
-                              Navigator.pop(context);
-                            } else {
-                              Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const HomeScreen()));
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      const Text(
-                        'Directory',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- Segmented Control ---
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                // --- Header + Segment Control (scrolls away) ---
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSegmentButton(0, 'Faculty'),
-                        _buildSegmentButton(1, 'Halls'),
-                        _buildSegmentButton(2, 'Labs'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
-                  // --- Search Bar ---
-                  Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: Colors.black, width: 2),
-                    ),
-                    child: Row(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(left: 16.0, right: 8.0),
-                          child: Icon(Icons.search, color: Color(0xFF666666)),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: _onSearchChanged,
-                            decoration: InputDecoration(
-                              hintText: _getSearchHint(),
-                              hintStyle: const TextStyle(
-                                color: Color(0xFFAAAAAA),
-                                fontSize: 14,
+                        // --- Header (Back btn + Title) ---
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: const BoxDecoration(
+                                color: Colors.black,
+                                shape: BoxShape.circle,
                               ),
-                              border: InputBorder.none,
-                              isDense: true,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.arrow_back,
+                                    color: Colors.white, size: 20),
+                                onPressed: () {
+                                  if (Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  } else {
+                                    Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const HomeScreen()));
+                                  }
+                                },
+                              ),
                             ),
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
+                            const SizedBox(width: 20),
+                            const Text(
+                              'Directory',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                                letterSpacing: -0.5,
+                              ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- Segmented Control ---
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildSegmentButton(0, 'Faculty'),
+                              _buildSegmentButton(1, 'Halls'),
+                              _buildSegmentButton(2, 'Labs'),
+                            ],
                           ),
                         ),
-                        if (_searchController.text.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.close,
-                                color: Color(0xFF666666), size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onSearchChanged('');
-                            },
-                          ),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
 
-                  // --- List Body ---
-                  Expanded(
+                // --- Sticky Search Bar (scrolls up, then pins at top) ---
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _DirectoryStickySearchBarDelegate(
+                    child: Container(
+                      color: AppColors.backgroundLight,
+                      padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, right: 24.0),
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: AppColors.backgroundLight,
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(color: Colors.black, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(left: 16.0, right: 8.0),
+                              child: Icon(Icons.search, color: Color(0xFF666666)),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: _onSearchChanged,
+                                decoration: InputDecoration(
+                                  hintText: _getSearchHint(),
+                                  hintStyle: const TextStyle(
+                                    color: Color(0xFFAAAAAA),
+                                    fontSize: 14,
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            if (_searchController.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.close,
+                                    color: Color(0xFF666666), size: 20),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _onSearchChanged('');
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // --- List Body ---
+                SliverFillRemaining(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
                     child: _buildListBody(),
                   ),
-                  const SizedBox(height: 100), // padding for floating navbar
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
@@ -357,11 +382,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Photo (rounded square, 80×80)
+                        // Photo (rounded square)
                         // Outer: white border ring
                         Container(
-                          width: 80,
-                          height: 80,
+                          width: MediaQuery.of(context).size.width * 0.20,
+                          height: MediaQuery.of(context).size.width * 0.20,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: Colors.white, width: 3),
@@ -406,6 +431,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 5),
                               // Role (Professor / Assistant Professor etc.)
@@ -628,8 +655,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                       children: [
                         // Profile Image (Rounded Square with white border)
                         Container(
-                          width: 80,
-                          height: 80,
+                          width: MediaQuery.of(context).size.width * 0.20,
+                          height: MediaQuery.of(context).size.width * 0.20,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.white, width: 2),
@@ -661,6 +688,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
@@ -835,5 +864,28 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         ),
       ),
     );
+  }
+}
+
+class _DirectoryStickySearchBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _DirectoryStickySearchBarDelegate({required this.child});
+
+  @override
+  double get minExtent => 66.0;
+
+  @override
+  double get maxExtent => 66.0;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _DirectoryStickySearchBarDelegate oldDelegate) {
+    return child != oldDelegate.child;
   }
 }

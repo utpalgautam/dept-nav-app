@@ -168,19 +168,26 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                   ),
                 ),
 
-                // --- Search Bar ---
+                // --- Sticky Search Bar (scrolls up, then pins at top) ---
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _StickySearchBarDelegate(
                     child: Container(
                       color: AppColors.backgroundLight,
-                      padding: const EdgeInsets.only(bottom: 24.0, left: 24.0, right: 24.0),
+                      padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, right: 24.0),
                       child: Container(
                         height: 52,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2F2F2),
+                          color: AppColors.backgroundLight,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.black, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -448,8 +455,8 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
             children: [
               // Building image — base64 from Firestore, falls back to icon
               Container(
-                width: 80,
-                height: 80,
+                width: MediaQuery.of(context).size.width * 0.20,
+                height: MediaQuery.of(context).size.width * 0.20,
                 margin:
                     const EdgeInsets.only(left: 12.0, top: 12.0, bottom: 12.0),
                 decoration: BoxDecoration(
@@ -637,10 +644,10 @@ class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
   _StickySearchBarDelegate({required this.child});
 
   @override
-  double get minExtent => 76.0;
+  double get minExtent => 68.0;
 
   @override
-  double get maxExtent => 76.0;
+  double get maxExtent => 68.0;
 
   @override
   Widget build(
