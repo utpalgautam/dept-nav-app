@@ -33,7 +33,8 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
       _isLoading = true;
     });
     try {
-      final floorData = await _firestoreService.getFloorMap(widget.building.id, _selectedFloor);
+      final floorData = await _firestoreService.getFloorMap(
+          widget.building.id, _selectedFloor);
       setState(() {
         _currentFloorData = floorData;
         _isLoading = false;
@@ -66,7 +67,7 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              
+
               // --- Header ---
               Row(
                 children: [
@@ -95,50 +96,163 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // --- Floor Chips ---
-              if (widget.building.totalFloors > 0)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(widget.building.totalFloors, (index) {
-                      final isSelected = index == _selectedFloor;
-                      final label = index == 0 ? 'G' : '$index';
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12.0),
-                        child: GestureDetector(
-                          onTap: () => _onFloorSelected(index),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 60,
-                            height: 48,
-                            alignment: Alignment.center,
+              // --- Building Details Card ---
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C1D21),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    // Coordinates
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: isSelected ? Colors.black : Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: isSelected
-                                  ? []
-                                  : [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      )
-                                    ],
+                              color: const Color(0xFF333333),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              label,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.white : Colors.black,
-                              ),
+                            child: const Icon(
+                              Icons.location_on_outlined,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Coordinates',
+                                  style: TextStyle(
+                                    color: Color(0xFF999999),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${widget.building.latitude.toStringAsFixed(4)}°N, ${widget.building.longitude.toStringAsFixed(4)}°E',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Divider
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: const Color(0xFF444444),
+                    ),
+
+                    const SizedBox(width: 16),
+
+                    // Floors
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF333333),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.layers_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                      );
-                    }),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Floors',
+                              style: TextStyle(
+                                color: Color(0xFF999999),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.building.totalFloors}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // --- Floor Dropdown ---
+              if (widget.building.totalFloors > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.black, width: 1.5),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: _selectedFloor,
+                      isExpanded: true,
+                      icon: const Icon(Icons.keyboard_arrow_down,
+                          color: Colors.black),
+                      dropdownColor: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                      items:
+                          List.generate(widget.building.totalFloors, (index) {
+                        final label =
+                            index == 0 ? 'Ground Floor' : 'Floor $index';
+                        return DropdownMenuItem<int>(
+                          value: index,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.layers_outlined,
+                                  size: 18, color: Colors.black54),
+                              const SizedBox(width: 10),
+                              Text(label),
+                            ],
+                          ),
+                        );
+                      }),
+                      onChanged: (value) {
+                        if (value != null) _onFloorSelected(value);
+                      },
+                    ),
                   ),
                 ),
               const SizedBox(height: 24),
@@ -153,7 +267,8 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Colors.black))
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.black))
                       : _buildMapContent(),
                 ),
               ),
@@ -168,35 +283,40 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
   Widget _buildMapContent() {
     // If we have actual floor data
     if (_currentFloorData != null) {
-      Widget? mapWidget;
-      if (_currentFloorData!.mapImageUrl != null && _currentFloorData!.mapImageUrl!.isNotEmpty) {
-        mapWidget = Image.network(
-          _currentFloorData!.mapImageUrl!,
-          fit: BoxFit.contain,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(child: CircularProgressIndicator(color: Colors.black));
-          },
-          errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.error, size: 40)),
+      if (_currentFloorData!.mapImageUrl != null &&
+          _currentFloorData!.mapImageUrl!.isNotEmpty) {
+        return _buildInteractiveLayer(
+          child: Image.network(
+            _currentFloorData!.mapImageUrl!,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(
+                  child: CircularProgressIndicator(color: Colors.black));
+            },
+            errorBuilder: (_, __, ___) =>
+                const Center(child: Icon(Icons.error, size: 40)),
+          ),
         );
-      } else if (_currentFloorData!.svgMapUrl != null && _currentFloorData!.svgMapUrl!.isNotEmpty) {
-        mapWidget = SvgPicture.network(
-          _currentFloorData!.svgMapUrl!,
-          fit: BoxFit.contain,
-          placeholderBuilder: (_) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+      } else if (_currentFloorData!.svgMapUrl != null &&
+          _currentFloorData!.svgMapUrl!.isNotEmpty) {
+        return _buildInteractiveLayer(
+          child: SvgPicture.network(
+            _currentFloorData!.svgMapUrl!,
+            fit: BoxFit.contain,
+            placeholderBuilder: (_) => const Center(
+                child: CircularProgressIndicator(color: Colors.black)),
+          ),
         );
-      } else if (_currentFloorData!.svgMapData != null && _currentFloorData!.svgMapData!.isNotEmpty) {
-        mapWidget = SvgPicture.string(
-          _currentFloorData!.svgMapData!,
-          fit: BoxFit.contain,
-        );
-      }
-
-      if (mapWidget != null) {
+      } else if (_currentFloorData!.svgMapData != null &&
+          _currentFloorData!.svgMapData!.isNotEmpty) {
         return _buildInteractiveLayer(
           child: Stack(
             children: [
-              mapWidget,
+              SvgPicture.string(
+                _currentFloorData!.svgMapData!,
+                fit: BoxFit.contain,
+              ),
               if (_currentFloorData!.pois.isNotEmpty)
                 Positioned.fill(
                   child: CustomPaint(
@@ -208,41 +328,41 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
         );
       }
     }
-    
+
     // Fallback placeholder if no data is found
     return _buildInteractiveLayer(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // A subtle grid pattern or empty map indicator
-          Container(
-            color: const Color(0xFFFAFAFA),
-          ),
-          const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.map_outlined, size: 64, color: Color(0xFFDDDDDD)),
-              SizedBox(height: 16),
-              Text(
-                'Floor Map not available',
-                style: TextStyle(
-                  color: Color(0xFFAAAAAA),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
+        child: Stack(
+      alignment: Alignment.center,
+      children: [
+        // A subtle grid pattern or empty map indicator
+        Container(
+          color: const Color(0xFFFAFAFA),
+        ),
+        const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.map_outlined, size: 64, color: Color(0xFFDDDDDD)),
+            SizedBox(height: 16),
+            Text(
+              'Floor Map not available',
+              style: TextStyle(
+                color: Color(0xFFAAAAAA),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          )
-        ],
-      )
-    );
+            ),
+          ],
+        )
+      ],
+    ));
   }
 
   Widget _buildInteractiveLayer({required Widget child}) {
     return InteractiveViewer(
       minScale: 0.5,
       maxScale: 5.0,
-      boundaryMargin: const EdgeInsets.all(100), // allows panning past the edges slightly
+      boundaryMargin:
+          const EdgeInsets.all(100), // allows panning past the edges slightly
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),

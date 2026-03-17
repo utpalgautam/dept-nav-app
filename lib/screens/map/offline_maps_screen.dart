@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import '../../models/building_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/offline_storage_service.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../directory/directory_screen.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../home/search_screen.dart';
+import 'explore_map_screen.dart';
 import 'offline_floor_map_screen.dart';
 
 class OfflineMapsScreen extends StatefulWidget {
@@ -18,8 +20,61 @@ class OfflineMapsScreen extends StatefulWidget {
 
 class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  final OfflineStorageService _offlineStorageService = OfflineStorageService();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Set<String> _downloadedBuildingIds = {};
+  bool _isLoadingIds = true;
+  Set<String> _downloadingIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDownloadedIds();
+  }
+
+  Future<void> _loadDownloadedIds() async {
+    final ids = await _offlineStorageService.getDownloadedBuildingIds();
+    if (mounted) {
+      setState(() {
+        _downloadedBuildingIds = ids;
+        _isLoadingIds = false;
+      });
+    }
+  }
+
+  Future<void> _downloadMap(String buildingId) async {
+    setState(() {
+      _downloadingIds.add(buildingId);
+    });
+
+    // Simulate map download duration
+    await Future.delayed(const Duration(seconds: 2));
+    await _offlineStorageService.markAsDownloaded(buildingId);
+
+    if (mounted) {
+      setState(() {
+        _downloadingIds.remove(buildingId);
+        _downloadedBuildingIds.add(buildingId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Map downloaded successfully!')),
+      );
+    }
+  }
+
+  Future<void> _deleteMap(String buildingId) async {
+    await _offlineStorageService.removeDownloadedMap(buildingId);
+
+    if (mounted) {
+      setState(() {
+        _downloadedBuildingIds.remove(buildingId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Map deleted successfully!')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -37,13 +92,17 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
     if (index == 3) return; // already in MAP
 
     if (index == 0) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const HomeScreen()));
     } else if (index == 1) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DirectoryScreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const DirectoryScreen()));
     } else if (index == 2) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const SearchScreen()));
     } else if (index == 4) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
     }
   }
 
@@ -54,97 +113,123 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
       body: Stack(
         children: [
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-
-                  // --- Header (Back btn & Title) ---
-                  Row(
-                    children: [
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () {
-                             if (Navigator.canPop(context)) {
-                                Navigator.pop(context);
-                             } else {
-                                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-                             }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      const Text(
-                        'Offline Maps',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- Main Map Card ---
-                  _buildMainMapCard(),
-                  const SizedBox(height: 24),
-
-                  // --- Search Bar ---
-                  Container(
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF2F2F2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.black, width: 1.5),
-                    ),
-                    child: Row(
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Icon(Icons.search, color: Color(0xFF666666)),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: _onSearchChanged,
-                            decoration: const InputDecoration(
-                              hintText: 'Search Faculty cabins...',
-                              hintStyle: TextStyle(
-                                color: Color(0xFFAAAAAA),
-                                fontSize: 15,
+                        const SizedBox(height: 20),
+
+                        // --- Header (Back btn & Title) ---
+                        Row(
+                          children: [
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black,
+                                shape: BoxShape.circle,
                               ),
-                              border: InputBorder.none,
-                              isDense: true,
+                              child: IconButton(
+                                icon:
+                                    const Icon(Icons.arrow_back, color: Colors.white),
+                                onPressed: () {
+                                  if (Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  } else {
+                                    Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const HomeScreen()));
+                                  }
+                                },
+                              ),
                             ),
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 15,
+                            const SizedBox(width: 24),
+                            const Text(
+                              'Offline Maps',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
+                          ],
                         ),
+                        const SizedBox(height: 24),
+
+                        // --- Main Map Card ---
+                        _buildMainMapCard(),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
 
-                  // --- List Body ---
-                  Expanded(
-                    child: _buildBuildingsList(),
+                // --- Sticky Search Bar (scrolls up, then pins at top) ---
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _StickySearchBarDelegate(
+                    child: Container(
+                      color: AppColors.backgroundLight,
+                      padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, right: 24.0),
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.backgroundLight,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.black, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Icon(Icons.search, color: Color(0xFF666666)),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: _onSearchChanged,
+                                decoration: const InputDecoration(
+                                  hintText: 'Search buildings...',
+                                  hintStyle: TextStyle(
+                                    color: Color(0xFFAAAAAA),
+                                    fontSize: 15,
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 100), // padding for floating navbar
-                ],
-              ),
+                ),
+
+                // --- List Body ---
+                SliverPadding(
+                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 100.0),
+                  sliver: _buildBuildingsList(),
+                ),
+              ],
             ),
           ),
-          
+
           // Floating Bottom Nav Bar
           Positioned(
             bottom: 30,
@@ -161,81 +246,90 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   }
 
   Widget _buildMainMapCard() {
-    return Container(
-      width: double.infinity,
-      height: 180,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1D21),
-        borderRadius: BorderRadius.circular(32),
-      ),
-      child: Stack(
-        children: [
-          // Background circle designs
-          Positioned(
-            right: -60,
-            top: -40,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                color: const Color(0xFF333333).withOpacity(0.5),
-                shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ExploreMapScreen()),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        height: 180,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1D21),
+          borderRadius: BorderRadius.circular(32),
+        ),
+        child: Stack(
+          children: [
+            // Background circle designs
+            Positioned(
+              right: -60,
+              top: -40,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF333333).withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-          ),
-          Positioned(
-            right: 20,
-            top: 40,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: const BoxDecoration(
-                color: Color(0xFF3B3B3B),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.map,
-                color: Colors.white,
-                size: 40,
+            Positioned(
+              right: 20,
+              top: 40,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF3B3B3B),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.map,
+                  color: Colors.white,
+                  size: 40,
+                ),
               ),
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.all(28.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4A4A4A),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Intractive',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+            Padding(
+              padding: const EdgeInsets.all(28.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A4A4A),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Interactive',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Whole NITC Map',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Whole NITC Map',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -244,11 +338,17 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
     return StreamBuilder<List<BuildingModel>>(
       stream: _firestoreService.streamAllBuildings(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.black));
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            _isLoadingIds) {
+          return const SliverToBoxAdapter(
+            child: Center(
+                child: CircularProgressIndicator(color: Colors.black)),
+          );
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return SliverToBoxAdapter(
+            child: Center(child: Text('Error: ${snapshot.error}')),
+          );
         }
 
         var buildings = snapshot.data ?? [];
@@ -259,22 +359,75 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
         }
 
         if (buildings.isEmpty) {
-          return const Center(child: Text('No buildings found.'));
+          return const SliverToBoxAdapter(
+            child: Center(child: Text('No buildings found.')),
+          );
         }
 
-        return ListView.separated(
-          itemCount: buildings.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (context, index) {
-            final building = buildings[index];
-            return _buildBuildingCard(building);
-          },
+        final downloadedMaps = buildings
+            .where((b) => _downloadedBuildingIds.contains(b.id))
+            .toList();
+        final availableMaps = buildings
+            .where((b) => !_downloadedBuildingIds.contains(b.id))
+            .toList();
+
+        final listItems = <Widget>[];
+
+        if (downloadedMaps.isNotEmpty) {
+          listItems.add(
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                'Downloaded Maps',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          );
+          listItems.addAll(downloadedMaps.map((b) => Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _buildBuildingCard(b, isDownloaded: true),
+              )));
+          if (availableMaps.isNotEmpty) {
+            listItems.add(const SizedBox(height: 16));
+          }
+        }
+
+        if (availableMaps.isNotEmpty) {
+          listItems.add(
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                'Available Maps',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          );
+          listItems.addAll(availableMaps.map((b) => Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _buildBuildingCard(b, isDownloaded: false),
+              )));
+        }
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => listItems[index],
+            childCount: listItems.length,
+          ),
         );
       },
     );
   }
 
-  Widget _buildBuildingCard(BuildingModel building) {
+  Widget _buildBuildingCard(BuildingModel building,
+      {required bool isDownloaded}) {
     final imageBytes = building.imageBytes;
 
     return Container(
@@ -302,10 +455,10 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
             children: [
               // Building image — base64 from Firestore, falls back to icon
               Container(
-                width: 80,
-                height: 80,
-                margin: const EdgeInsets.only(
-                    left: 12.0, top: 12.0, bottom: 12.0),
+                width: MediaQuery.of(context).size.width * 0.20,
+                height: MediaQuery.of(context).size.width * 0.20,
+                margin:
+                    const EdgeInsets.only(left: 12.0, top: 12.0, bottom: 12.0),
                 decoration: BoxDecoration(
                   color: const Color(0xFF333333),
                   borderRadius: BorderRadius.circular(18),
@@ -329,7 +482,7 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
               ),
 
               const SizedBox(width: 16),
-              
+
               // Building Details
               Expanded(
                 child: Padding(
@@ -350,7 +503,7 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                         '${building.latitude.toStringAsFixed(4)} N, ${building.longitude.toStringAsFixed(4)} E',
+                        '${building.latitude.toStringAsFixed(4)} N, ${building.longitude.toStringAsFixed(4)} E',
                         style: const TextStyle(
                           color: Color(0xFFAAAAAA),
                           fontSize: 12,
@@ -361,7 +514,8 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.layers, color: Colors.white, size: 16),
+                          const Icon(Icons.layers,
+                              color: Colors.white, size: 16),
                           const SizedBox(width: 6),
                           Text(
                             '${building.totalFloors} Floors',
@@ -377,39 +531,132 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              
-              // Elevated Button "View"
+              const SizedBox(width: 4),
+
+              // Elevated Button
               Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => OfflineFloorMapScreen(building: building),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF333333), // grey button fill
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: const Text(
-                    'View',
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                  ),
-                ),
+                padding: const EdgeInsets.only(right: 12.0),
+                child: _downloadingIds.contains(building.id)
+                    ? const Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        ),
+                      )
+                    : isDownloaded
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => OfflineFloorMapScreen(
+                                          building: building),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(
+                                      0xFF333333), // grey button fill
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                ),
+                                child: const Text(
+                                  'View',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              ElevatedButton(
+                                onPressed: () => _deleteMap(building.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color.fromARGB(255, 244, 81, 70),
+                                  elevation: 0,
+                                  minimumSize: const Size(36, 36),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.all(6),
+                                ),
+                                child:
+                                    const Icon(Icons.delete_outline, size: 16),
+                              ),
+                            ],
+                          )
+                        : ElevatedButton(
+                            onPressed: () => _downloadMap(building.id),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.download,
+                                  size: 16,
+                                  color: Colors.black,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Download',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: Colors.black),
+                                ),
+                              ],
+                            ),
+                          ),
               ),
             ],
           ),
         ],
       ),
     );
+  }
+}
+
+class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickySearchBarDelegate({required this.child});
+
+  @override
+  double get minExtent => 68.0;
+
+  @override
+  double get maxExtent => 68.0;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickySearchBarDelegate oldDelegate) {
+    return child != oldDelegate.child;
   }
 }
