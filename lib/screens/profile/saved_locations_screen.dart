@@ -72,7 +72,39 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _allSavedLocations = [];
+            _allSavedLocations = [
+              LocationModel(
+                id: 'sample_faculty_1',
+                name: 'Dr. John Doe',
+                type: LocationType.faculty,
+                buildingId: 'b_sample_1',
+                floor: 2,
+                roomNumber: '204',
+                description: 'Professor of Computer Science',
+              ),
+              LocationModel(
+                id: 'sample_faculty_2',
+                name: 'Dr. Jane Smith',
+                type: LocationType.faculty,
+                buildingId: 'b_sample_1',
+                floor: 3,
+                roomNumber: '301',
+                description: 'Associate Professor of IT',
+              ),
+              LocationModel(
+                id: 'sample_faculty_3',
+                name: 'Dr. Robert Brown',
+                type: LocationType.faculty,
+                buildingId: 'b_sample_2',
+                floor: 1,
+                roomNumber: '105',
+                description: 'Assistant Professor of AI',
+              ),
+            ];
+            _buildingNames = {
+              'b_sample_1': 'Main IT Block',
+              'b_sample_2': 'New Academic Building',
+            };
             _isLoading = false;
           });
         }
