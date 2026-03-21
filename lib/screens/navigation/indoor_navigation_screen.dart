@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../models/floor_model.dart';
@@ -42,6 +43,17 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   bool _isNavigatingToStairs = false;
   bool _isDebugMode = false;
+
+  // Map interactive state
+  double _scale = 1.0;
+  double _baseScale = 1.0;
+  double _panX = 0.0;
+  double _panY = 0.0;
+  double _rotationZ = 0.05; // Initial slight rotation 
+  double _baseRotation = 0.05;
+  final double _tiltAngle = -0.9; // Negative to tilt top away, bottom closer
+
+  int _routeDistanceMeters = 0;
 
   @override
   void initState() {
@@ -155,7 +167,33 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
         _currentInstruction = 'Follow the path to reach $roomLabel';
       }
     }
+
+    _calculateRouteDistance();
   }
+
+  void _calculateRouteDistance() {
+    if (_currentPath.isEmpty || _currentGraph == null) {
+      _routeDistanceMeters = 0;
+      return;
+    }
+
+    double totalWeight = 0.0;
+    for (int i = 0; i < _currentPath.length - 1; i++) {
+      final nodeA = _currentPath[i];
+      final nodeB = _currentPath[i + 1];
+      
+      try {
+        final edge = _currentGraph!.edges.firstWhere(
+          (e) => (e.from == nodeA.id && e.to == nodeB.id) || 
+                 (e.from == nodeB.id && e.to == nodeA.id)
+        );
+        totalWeight += edge.weight;
+      } catch (_) {}
+    }
+
+    _routeDistanceMeters = (totalWeight / 40).round();
+  }
+
 
   void _onReachedWaypoint() {
     if (_isNavigatingToStairs) {
@@ -240,18 +278,48 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
     StringBuffer overlays = StringBuffer();
 
-    // Add Route
+    // Add Route with arrows
     if (_currentPath.isNotEmpty) {
       String points = _currentPath.map((p) => '${p.x},${p.y}').join(' ');
-      overlays.write('<polyline points="$points" stroke="blue" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" />');
       
-      // Add Destination Marker in SVG
-      final dest = _currentPath.last;
-      overlays.write('<circle cx="${dest.x}" cy="${dest.y}" r="8" fill="red" />');
+      // Light blue base line (much thicker to match reference)
+      overlays.write('<polyline points="$points" stroke="#bfdbfe" stroke-width="24" fill="none" stroke-linecap="round" stroke-linejoin="round" />');
 
-      // Add Start (User) Marker in SVG
+      // Explicitly draw chevrons instead of using SVG markers safely
+      double arrowSpacing = 20.0;
+      double arrowSize = 8.0;
+
+      for (int i = 0; i < _currentPath.length - 1; i++) {
+        final p1 = _currentPath[i];
+        final p2 = _currentPath[i + 1];
+        double dx = p2.x - p1.x;
+        double dy = p2.y - p1.y;
+        double dist = math.sqrt(dx * dx + dy * dy);
+        double angle = math.atan2(dy, dx);
+        
+        if (dist > arrowSpacing) {
+          int count = (dist / arrowSpacing).floor();
+          for (int j = 1; j <= count; j++) {
+            double fraction = (j * arrowSpacing) / dist;
+            double cx = p1.x + dx * fraction;
+            double cy = p1.y + dy * fraction;
+            
+            double x1 = cx - math.cos(angle - math.pi / 6) * arrowSize;
+            double y1 = cy - math.sin(angle - math.pi / 6) * arrowSize;
+            double x2 = cx - math.cos(angle + math.pi / 6) * arrowSize;
+            double y2 = cy - math.sin(angle + math.pi / 6) * arrowSize;
+            
+            overlays.write('<polyline points="$x1,$y1 $cx,$cy $x2,$y2" stroke="#2563eb" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" />');
+          }
+        }
+      }
+      
+      // Destination pin is now handled as a Flutter widget overlay
+
+      // Start Marker (Light Blue Outer Circle, Dark Blue Inner Circle)
       final start = _currentPath.first;
-      overlays.write('<circle cx="${start.x}" cy="${start.y}" r="8" fill="green" />');
+      overlays.write('<circle cx="${start.x}" cy="${start.y}" r="16" fill="#bfdbfe" fill-opacity="0.8" />');
+      overlays.write('<circle cx="${start.x}" cy="${start.y}" r="8" fill="#2563eb" />');
     }
 
     // Add Debug Nodes
@@ -268,100 +336,99 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F5F5),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.blue))
-          : SafeArea(
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  Expanded(
-                    child: _buildMapView(),
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: _buildMapView(),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: _buildHeader(),
+                    ),
                   ),
-                  _buildBottomPanel(),
-                ],
-              ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildBottomPanel(),
+                ),
+              ],
             ),
     );
   }
 
   Widget _buildHeader() {
-    String floorName = _currentFloor == 0 ? 'Ground' : 'Floor $_currentFloor';
+    String floorName = _currentFloor == 0 ? 'Ground Floor' : 'Floor $_currentFloor';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           )
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.buildingName,
-                    style: const TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14),
-                  ),
-                  Text(
-                    floorName,
-                    style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _isDebugMode ? Icons.bug_report : Icons.bug_report_outlined,
-                      color: _isDebugMode ? Colors.red : Colors.grey,
-                    ),
-                    onPressed: () => setState(() => _isDebugMode = !_isDebugMode),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      Provider.of<NavigationProvider>(context, listen: false)
-                          .stopNavigation();
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child:
-                          const Icon(Icons.close, color: Colors.black, size: 20),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(Icons.turn_left, color: Colors.white, size: 30),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _isDebugMode && _errorMessage != null ? _errorMessage! : _currentInstruction,
-            style: TextStyle(
-                color: _isDebugMode && _errorMessage != null ? Colors.red : Colors.black87,
-                fontSize: 15,
-                fontWeight: _isDebugMode && _errorMessage != null ? FontWeight.bold : FontWeight.normal),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$floorName ${widget.buildingName}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  _isDebugMode && _errorMessage != null ? _errorMessage! : _currentInstruction,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _isDebugMode && _errorMessage != null ? Colors.red : Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: () {
+                Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.close, color: Colors.black, size: 20),
+            ),
           ),
         ],
       ),
@@ -380,29 +447,74 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
     }
 
     final vb = _currentGraph?.viewBox ?? [0.0, 0.0, 800.0, 600.0];
-    final double vbWidth = (vb.length > 2 && vb[2] > 0) ? vb[2] : 800.0;
-    final double vbHeight = (vb.length > 3 && vb[3] > 0) ? vb[3] : 600.0;
+    final double mapWidth = (vb.length > 2 && vb[2] > 0) ? vb[2] : 800.0;
+    final double mapHeight = (vb.length > 3 && vb[3] > 0) ? vb[3] : 600.0;
 
-    return InteractiveViewer(
-      minScale: 0.5,
-      maxScale: 5.0,
-      child: Center(
+    return GestureDetector(
+      onScaleStart: (details) {
+        _baseScale = _scale;
+        _baseRotation = _rotationZ;
+      },
+      onScaleUpdate: (details) {
+        setState(() {
+          // Handle Pan
+          _panX += details.focalPointDelta.dx;
+          _panY += details.focalPointDelta.dy;
+          
+          // Handle Zoom correctly with multiplier
+          _scale = (_baseScale * details.scale).clamp(0.5, 6.0);
+          
+          // Handle Rotation
+          _rotationZ = _baseRotation + details.rotation;
+        });
+      },
+      child: ClipRRect(
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                spreadRadius: 5,
-              )
-            ],
-          ),
-          child: AspectRatio(
-            aspectRatio: vbWidth / vbHeight,
-            child: SvgPicture.string(
-              processedSvg,
-              fit: BoxFit.contain,
+          color: const Color(0xFFF5F5F5),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..translate(_panX, _panY)
+              ..rotateX(_tiltAngle)
+              ..scale(_scale)
+              ..rotateZ(_rotationZ),
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: mapWidth / mapHeight,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double w = constraints.maxWidth;
+                    final double h = constraints.maxHeight;
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        SvgPicture.string(
+                          processedSvg,
+                          fit: BoxFit.contain,
+                        ),
+                        if (_currentPath.isNotEmpty)
+                          Positioned(
+                            left: (_currentPath.last.x / mapWidth) * w - 24, // Half of 48 size horizontally
+                            top: (_currentPath.last.y / mapHeight) * h - 48, // Bottom anchors to destination
+                            child: Transform(
+                              alignment: Alignment.bottomCenter,
+                              transform: Matrix4.identity()
+                                ..rotateZ(-_rotationZ)
+                                ..rotateX(-_tiltAngle),
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.black,
+                                size: 48,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -412,75 +524,94 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   Widget _buildBottomPanel() {
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          )
+            color: Colors.black12,
+            blurRadius: 30,
+            offset: Offset(0, -10),
+          ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.directions_walk, color: Colors.blue),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_routeDistanceMeters}m ahead',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _isNavigatingToStairs ? 'Phase 1' : 'Final Phase',
-                      style: const TextStyle(color: Colors.black54, fontSize: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    'Flow Blue line',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    _isNavigatingToStairs
+                        ? 'Floor Change Needed'
+                        : 'Target nearby',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    Text(
-                      _isNavigatingToStairs
-                          ? 'Navigate to Stairs'
-                          : 'Navigate to Destination',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _onReachedWaypoint,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _onReachedWaypoint,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text('Confirm Reach', 
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-                elevation: 0,
               ),
-              child: const Text(
-                'Confirm Reached',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text('Exit Navigation', 
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
