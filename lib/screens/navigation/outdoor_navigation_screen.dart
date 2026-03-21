@@ -177,11 +177,13 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen> {
                 child: CustomNavigationControls(
                   isNavigating: navProvider.isNavigating,
                   isLoading: navProvider.isLoadingRoute,
-                  instruction: widget.targetBuilding?.name ?? 'Destination',
-                  distance: navProvider.distanceToDestination != null
-                      ? '${navProvider.distanceToDestination!.toStringAsFixed(0)}m'
-                      : (navProvider.currentRoute != null
-                          ? '${navProvider.currentRoute!.distance.toStringAsFixed(0)}m'
+                  instruction: navProvider.currentInstruction ?? 'Follow the route',
+                  distance: navProvider.distanceToNextStep != null 
+                      ? (navProvider.distanceToNextStep! < 1000 
+                          ? '${navProvider.distanceToNextStep!.toStringAsFixed(0)} m'
+                          : '${(navProvider.distanceToNextStep! / 1000).toStringAsFixed(1)} km')
+                      : (navProvider.distanceToDestination != null
+                          ? '${navProvider.distanceToDestination!.toStringAsFixed(0)} m'
                           : '...'),
                   time: navProvider.isNavigating
                       ? (navProvider.remainingTime != null

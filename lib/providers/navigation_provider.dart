@@ -29,6 +29,7 @@ class NavigationProvider extends ChangeNotifier {
   NavigationRoute? _currentRoute;
   String? _currentInstruction;
   int _currentInstructionIndex = 0;
+  double? _distanceToNextStep;
   double? _distanceToDestination;
   String? _routeError;
   List<LatLng> _remainingRouteCoordinates = [];
@@ -54,6 +55,7 @@ class NavigationProvider extends ChangeNotifier {
   List<LatLng> get remainingRouteCoordinates => 
       _remainingRouteCoordinates.isNotEmpty ? _remainingRouteCoordinates : (_currentRoute?.coordinates ?? []);
   String? get currentInstruction => _currentInstruction;
+  double? get distanceToNextStep => _distanceToNextStep;
   double? get distanceToDestination => _distanceToDestination;
   int? get remainingTime {
     if (_distanceToDestination == null || _currentRoute == null || _currentRoute!.distance == 0) return null;
@@ -151,6 +153,9 @@ class NavigationProvider extends ChangeNotifier {
         }
         _distanceToDestination = _currentRoute!.distance;
         _remainingRouteCoordinates = List.from(_currentRoute!.coordinates);
+        _distanceToNextStep = _currentRoute!.instructions.length > 1 
+            ? _currentRoute!.instructions[1].distance 
+            : null;
       }
     } catch (e) {
       _routeError = e.toString();
@@ -314,27 +319,29 @@ class NavigationProvider extends ChangeNotifier {
   void _updateInstructions(LatLng snapped, int segmentIndex) {
     if (_currentRoute == null || _currentRoute!.instructions.isEmpty) return;
 
-    // 1. Advance instruction if we passed its start node
-    while (_currentInstructionIndex + 1 < _currentRoute!.instructions.length &&
-           segmentIndex >= _currentRoute!.instructions[_currentInstructionIndex + 1].interval[0]) {
-      _currentInstructionIndex++;
-      _currentInstruction = _currentRoute!.instructions[_currentInstructionIndex].text;
-    }
-
-    // 2. Proximity check for the NEXT instruction
+    // 1. Proximity Check for the NEXT instruction (< 20m)
     if (_currentInstructionIndex + 1 < _currentRoute!.instructions.length) {
       final nextInst = _currentRoute!.instructions[_currentInstructionIndex + 1];
       final nextPoint = _currentRoute!.coordinates[nextInst.interval[0]];
       
-      double distToNext = NavigationUtils.calculateDistance(snapped, nextPoint);
+      _distanceToNextStep = NavigationUtils.calculateDistance(snapped, nextPoint);
       
-      // If within 40m, show the upcoming instruction
-      if (distToNext < 40.0) {
-        _currentInstruction = nextInst.text;
-      } else {
-        // Otherwise keep the current one
+      // Advance if within 20m or if we passed the segment index
+      if (_distanceToNextStep! < 20.0 || segmentIndex >= nextInst.interval[0]) {
+        _currentInstructionIndex++;
         _currentInstruction = _currentRoute!.instructions[_currentInstructionIndex].text;
+        
+        // Recalculate distance to the NEW next step if any
+        if (_currentInstructionIndex + 1 < _currentRoute!.instructions.length) {
+          final afterNext = _currentRoute!.instructions[_currentInstructionIndex + 1];
+          final afterNextPoint = _currentRoute!.coordinates[afterNext.interval[0]];
+          _distanceToNextStep = NavigationUtils.calculateDistance(snapped, afterNextPoint);
+        } else {
+          _distanceToNextStep = null;
+        }
       }
+    } else {
+      _distanceToNextStep = null;
     }
   }
 
@@ -417,6 +424,7 @@ class NavigationProvider extends ChangeNotifier {
     _currentRoute = null;
     _currentInstruction = null;
     _distanceToDestination = null;
+    _distanceToNextStep = null;
     _snappedPosition = null;
     _isRerouting = false;
     
