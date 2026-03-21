@@ -462,12 +462,13 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
         "carto",
         "3d-buildings",
         const FillExtrusionLayerProperties(
-          fillExtrusionColor: '#E4DCD0',
+          fillExtrusionColor: '#D3D3D3', // Clean light gray
           fillExtrusionHeight: ["get", "render_height"],
           fillExtrusionBase: ["get", "render_min_height"],
-          fillExtrusionOpacity: 0.8,
+          fillExtrusionOpacity: 0.6, // Semi-transparent for route visibility
         ),
         belowLayerId: "place_city_r5", // Place buildings below labels
+        minzoom: 15.0, // Only show buildings when zoomed in
       );
     } catch (e) {
       debugPrint("Error adding 3D buildings: $e");
