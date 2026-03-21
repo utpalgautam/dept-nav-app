@@ -336,7 +336,11 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Provider.of<NavigationProvider>(context, listen: false)
+                          .stopNavigation();
+                      Navigator.pop(context);
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(

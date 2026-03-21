@@ -75,9 +75,12 @@ class NavigationProvider extends ChangeNotifier {
     _destination = destination;
     _targetBuilding = targetBuilding;
     _targetEntryPoint = entryPoint;
+    _isNavigating = false;
+    _isIndoor = false;
     _isLoadingRoute = true;
     _routeError = null;
     _remainingRouteCoordinates = [];
+    _snappedPosition = null;
     notifyListeners();
 
     // 1. Warm up server (Anti-Cold Start)
@@ -168,6 +171,7 @@ class NavigationProvider extends ChangeNotifier {
     
     _isNavigating = true;
     _isIndoor = false;
+    _isRerouting = false;
     _remainingRouteCoordinates = List.from(_currentRoute!.coordinates);
     _snappedPosition = null;
     _positionBuffer.clear();
