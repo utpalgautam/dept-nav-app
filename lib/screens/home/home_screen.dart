@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart' as app_auth;
-import '../navigation/outdoor_navigation_screen.dart';
 import '../profile/profile_screen.dart';
 import 'search_screen.dart';
 import '../navigation/indoor_navigation_setup_screen.dart';
@@ -169,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Hello, $firstName!',
+                      'Hello,Utpal!',
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 28,
@@ -370,30 +369,34 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 1 – Popular locations → SearchScreen (shows popular/suggested places)
-            _buildCircle(
-              icon: Icons.directions_walk,
+            // 1 – Search
+            _buildActionItem(
+              icon: Icons.search,
+              label: 'Search',
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const SearchScreen())),
             ),
-            // 2 – Lab directory → DirectoryScreen with Labs tab (segment 2)
-            _buildCircle(
+            // 2 – Labs
+            _buildActionItem(
               icon: Icons.science_outlined,
+              label: 'Labs',
               onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) =>
                           const DirectoryScreen(initialSegment: 2))),
             ),
-            // 3 – Main building map → OfflineMapsScreen
-            _buildCircle(
-              icon: Icons.business_outlined,
+            // 3 – Buildings
+            _buildActionItem(
+              icon: Icons.apartment_outlined,
+              label: 'Buildings',
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const OfflineMapsScreen())),
             ),
-            // 4 – Faculty directory → DirectoryScreen (Faculty tab, segment 0)
-            _buildCircle(
-              icon: Icons.school_outlined,
+            // 4 – Faculty
+            _buildActionItem(
+              icon: Icons.person_outline,
+              label: 'Faculty',
               onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -406,25 +409,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCircle({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 68,
-        height: 68,
-        decoration: BoxDecoration(
-          color: const Color(0xFFB8C8E8),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+  Widget _buildActionItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 56, // Smaller as requested
+            height: 56,
+            decoration: BoxDecoration(
+              color: const Color(0xFFB8C8E8),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
+            child: Icon(icon, color: const Color(0xFF3A3A5C), size: 24),
+          ),
         ),
-        child: Icon(icon, color: const Color(0xFF3A3A5C), size: 28),
-      ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
