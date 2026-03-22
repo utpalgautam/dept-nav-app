@@ -19,8 +19,8 @@ class _OnboardingPage {
 
   const _OnboardingPage({
     required this.imagePath,
-    required this.titleLine1,
     required this.boldWord1,
+    required this.titleLine1,
     required this.titleLine2,
     required this.boldWord2,
     required this.subtitle,
@@ -87,8 +87,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     vsync: this,
     duration: const Duration(milliseconds: 1000),
   );
-  late final Animation<double> _imageScale = Tween<double>(begin: 1.07, end: 1.0)
-      .animate(CurvedAnimation(
+  late final Animation<double> _imageScale =
+      Tween<double>(begin: 1.07, end: 1.0).animate(CurvedAnimation(
           parent: _entranceCtrl,
           curve: const Interval(0.0, 0.7, curve: Curves.easeOut)));
   late final Animation<double> _imageFade = CurvedAnimation(
@@ -104,28 +104,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // ── Per-page staggered text animations ────────────────────────────────────
   late AnimationController _textCtrl;
-
-  // 3 items: line1, line2, subtitle
   final List<Interval> _textIntervals = const [
-    Interval(0.0, 0.5, curve: Curves.easeOut),  // line 1
-    Interval(0.15, 0.65, curve: Curves.easeOut), // line 2
-    Interval(0.35, 0.85, curve: Curves.easeOut), // subtitle
+    Interval(0.0, 0.5, curve: Curves.easeOut),
+    Interval(0.15, 0.65, curve: Curves.easeOut),
+    Interval(0.35, 0.85, curve: Curves.easeOut),
   ];
-
-  // ── Illustration ambient: subtle image parallax on page scroll ─────────────
-  late final AnimationController _swayCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 3200),
-  );
-
-  // ── Button press scale ─────────────────────────────────────────────────────
-  late final AnimationController _btnCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 110),
-  );
-  late final Animation<double> _btnScale =
-      Tween<double>(begin: 1.0, end: 0.88).animate(
-          CurvedAnimation(parent: _btnCtrl, curve: Curves.easeInOut));
 
   @override
   void initState() {
@@ -133,9 +116,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _textCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
     _entranceCtrl.forward().then((_) {
-      _textCtrl.forward(); // start text after panel appears
+      _textCtrl.forward();
     });
-    _swayCtrl.repeat(reverse: true);
   }
 
   @override
@@ -143,8 +125,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pageController.dispose();
     _entranceCtrl.dispose();
     _textCtrl.dispose();
-    _swayCtrl.dispose();
-    _btnCtrl.dispose();
     super.dispose();
   }
 
@@ -162,9 +142,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _nextPage() async {
-    HapticFeedback.lightImpact();
-    await _btnCtrl.forward();
-    await _btnCtrl.reverse();
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
           duration: const Duration(milliseconds: 500),
@@ -187,13 +164,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    // Illustration takes top 58%, panel sits below that
     final illustrationHeight = size.height * 0.58;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(fit: StackFit.expand, children: [
-        // ── Background illustration PageView (top 58%) ───────────────────
+        // ── Background illustration PageView ─────────────────────────────
         Positioned(
           top: 0,
           left: 0,
@@ -208,15 +184,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ),
 
-        // ── Swipe gesture detector (covers full screen) ──────────────────
+        // ── Full-screen swipe gesture ─────────────────────────────────────
         Positioned.fill(
           child: GestureDetector(
-            onHorizontalDragEnd: (details) {
-              if (details.primaryVelocity != null &&
-                  details.primaryVelocity! < -300) {
+            onHorizontalDragEnd: (d) {
+              if (d.primaryVelocity != null && d.primaryVelocity! < -300) {
                 _nextPage();
-              } else if (details.primaryVelocity != null &&
-                  details.primaryVelocity! > 300 &&
+              } else if (d.primaryVelocity != null &&
+                  d.primaryVelocity! > 300 &&
                   _currentPage > 0) {
                 _pageController.previousPage(
                     duration: const Duration(milliseconds: 500),
@@ -227,7 +202,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ),
 
-        // ── Soft gradient bridge between image and panel ─────────────────
+        // ── Gradient bridge (image → panel) ─────────────────────────────
         AnimatedBuilder(
           animation: _panelFade,
           builder: (_, __) => Positioned(
@@ -250,7 +225,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ),
 
-        // ── Frosted glass text panel (bottom 42%) ────────────────────────
+        // ── Frosted glass text panel ──────────────────────────────────────
         AnimatedBuilder(
           animation: _entranceCtrl,
           builder: (_, child) => Positioned(
@@ -296,7 +271,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Bottom text panel — glassmorphic card
+  // Bottom text panel
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTextPanel(_OnboardingPage page) {
     return Padding(
@@ -304,7 +279,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Glass card ─────────────────────────────────────────────────
+          // Glass card
           ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
@@ -330,21 +305,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Line 1 — staggered entrance
                     _StaggeredLine(
                       controller: _textCtrl,
                       interval: _textIntervals[0],
                       child: _buildRichLine(page.titleLine1, page.boldWord1),
                     ),
                     const SizedBox(height: 2),
-                    // Line 2 — slightly delayed
                     _StaggeredLine(
                       controller: _textCtrl,
                       interval: _textIntervals[1],
                       child: _buildRichLine(page.titleLine2, page.boldWord2),
                     ),
                     const SizedBox(height: 14),
-                    // Subtitle — last to appear
                     _StaggeredLine(
                       controller: _textCtrl,
                       interval: _textIntervals[2],
@@ -368,8 +340,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
           const Spacer(),
 
-          // ── Bottom navigation bar ───────────────────────────────────────
-          _buildBottomBar(),
+          // ── Swipe slider bar ──────────────────────────────────────────
+          _SwipeSlider(
+            page: _currentPage,
+            total: _pages.length,
+            isLast: _currentPage == _pages.length - 1,
+            onNext: _nextPage,
+          ),
           const SizedBox(height: 32),
         ],
       ),
@@ -390,108 +367,325 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           TextSpan(text: normal),
           TextSpan(
             text: bold,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ],
       ),
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Bottom navigation bar
-  // ─────────────────────────────────────────────────────────────────────────
-  Widget _buildBottomBar() {
-    final isLast = _currentPage == _pages.length - 1;
-    return Container(
-      height: 68,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(40),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(children: [
-        const SizedBox(width: 8),
-
-        // Walking icon
-        Container(
-          width: 52,
-          height: 52,
-          decoration: const BoxDecoration(
-              color: Colors.white, shape: BoxShape.circle),
-          child: const Icon(Icons.directions_walk_rounded,
-              color: Colors.black, size: 26),
-        ),
-
-        // Expanding pill dot indicators
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_pages.length, (i) {
-              final active = i == _currentPage;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeInOutCubic,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: active ? 26 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  color: active
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.28),
-                ),
-              );
-            }),
-          ),
-        ),
-
-        // Next / Done button
-        ScaleTransition(
-          scale: _btnScale,
-          child: GestureDetector(
-            onTap: _nextPage,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 320),
-              curve: Curves.easeInOut,
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isLast ? Colors.white : const Color(0xFF383838),
-                borderRadius: BorderRadius.circular(26),
-              ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                transitionBuilder: (child, anim) =>
-                    ScaleTransition(scale: anim, child: child),
-                child: Icon(
-                  isLast
-                      ? Icons.check_rounded
-                      : Icons.arrow_forward_ios_rounded,
-                  key: ValueKey<bool>(isLast),
-                  color: isLast ? Colors.black : Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(width: 8),
-      ]),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Staggered animation widget — each text line slides up + fades in
+// Draggable Swipe Slider — the main bottom control
+// ─────────────────────────────────────────────────────────────────────────────
+class _SwipeSlider extends StatefulWidget {
+  final int page;
+  final int total;
+  final bool isLast;
+  final VoidCallback onNext;
+
+  const _SwipeSlider({
+    required this.page,
+    required this.total,
+    required this.isLast,
+    required this.onNext,
+  });
+
+  @override
+  State<_SwipeSlider> createState() => _SwipeSliderState();
+}
+
+class _SwipeSliderState extends State<_SwipeSlider>
+    with SingleTickerProviderStateMixin {
+  // ── Internal state ─────────────────────────────────────────────────────────
+  // _progress in [0.0, 1.0]: 0 = handle at left, 1 = handle at right
+  double _progress = 0.0;
+  bool _busy = false; // true while animation is running
+
+  // ── Animation controller for snap-back & auto-complete ────────────────────
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+  late Animation<double> _tweenAnim;
+
+  static const double _handleSize = 52.0;
+  static const double _barPadding = 8.0;
+  static const double _completeThreshold = 0.80;
+
+  @override
+  void initState() {
+    super.initState();
+    // Single listener on controller — reads _tweenAnim.value
+    _anim.addListener(() {
+      if (mounted) setState(() => _progress = _tweenAnim.value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  // ── Drag ───────────────────────────────────────────────────────────────────
+  void _onDragUpdate(double dx, double maxDrag) {
+    if (_busy) return;
+    _anim.stop();
+    setState(() {
+      _progress = (_progress + dx / maxDrag).clamp(0.0, 1.0);
+    });
+  }
+
+  // ── Release ────────────────────────────────────────────────────────────────
+  void _onDragEnd() {
+    if (_busy) return;
+    if (_progress >= _completeThreshold) {
+      _complete();
+    } else {
+      _snapBack(curve: Curves.elasticOut);
+    }
+  }
+
+  // ── Auto-complete when threshold reached ───────────────────────────────────
+  Future<void> _complete() async {
+    _busy = true;
+    // Animate handle to end
+    await _animateTo(1.0, curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 280));
+    // Haptic + callback
+    HapticFeedback.mediumImpact();
+    widget.onNext();
+    // Small pause so the check icon shows briefly
+    await Future.delayed(const Duration(milliseconds: 180));
+    // Snap back
+    await _animateTo(0.0, curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 360));
+    _busy = false;
+  }
+
+  // ── Snap back ──────────────────────────────────────────────────────────────
+  void _snapBack({Curve curve = Curves.elasticOut}) {
+    _animateTo(0.0, curve: curve,
+        duration: const Duration(milliseconds: 480));
+  }
+
+  Future<void> _animateTo(
+    double target, {
+    required Curve curve,
+    required Duration duration,
+  }) async {
+    _anim.duration = duration;
+    _tweenAnim = Tween<double>(begin: _progress, end: target)
+        .animate(CurvedAnimation(parent: _anim, curve: curve));
+    _anim.forward(from: 0.0);
+    await _anim.forward(from: 0.0);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final barWidth = constraints.maxWidth;
+      final maxDrag = barWidth - _handleSize - _barPadding * 2;
+      final handleLeft = _barPadding + _progress * maxDrag;
+
+      // Handle scale: 1.0 → 1.10 as progress increases
+      final handleScale = 1.0 + _progress * 0.10;
+
+      // Glow radius on handle grows with progress
+      final glowBlur = _progress * 18.0;
+      final glowSpread = _progress * 3.0;
+      final glowAlpha = _progress * 0.45;
+
+      // Icon flips to check when near completion
+      final showCheck = _progress > 0.85;
+
+      // Track fill — progress bar behind handle
+      final fillWidth = _barPadding + _progress * maxDrag + _handleSize / 2;
+
+      return GestureDetector(
+        onHorizontalDragUpdate: (d) => _onDragUpdate(d.delta.dx, maxDrag),
+        onHorizontalDragEnd: (_) => _onDragEnd(),
+        child: Container(
+          height: 68,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.24),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(40),
+            child: Stack(clipBehavior: Clip.none, children: [
+              // ── Subtle progress fill behind handle ──────────────────────
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: fillWidth.clamp(0.0, barWidth),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.08 * _progress),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Dot indicators (centered, fades as handle moves over) ──
+              Center(
+                child: Opacity(
+                  // Fade dots when handle is in the middle zone
+                  opacity: (1.0 - (_progress * 1.6)).clamp(0.0, 1.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(widget.total, (i) {
+                      final active = i == widget.page;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOutCubic,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: active ? 26 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          color: active
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.28),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+
+              // ── Slide hint label — fades in when handle is at start ────
+              Positioned(
+                right: 16,
+                top: 0,
+                bottom: 0,
+                child: Opacity(
+                  opacity: (1.0 - _progress * 4).clamp(0.0, 0.38),
+                  child: Center(
+                    child: Text(
+                      widget.isLast ? 'start' : 'next',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Draggable handle ────────────────────────────────────────
+              Positioned(
+                left: handleLeft,
+                top: (_barPadding * 1.3),
+                child: Transform.scale(
+                  scale: handleScale,
+                  child: Container(
+                    width: _handleSize,
+                    height: _handleSize,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        // Base shadow
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                        // Glow that intensifies as handle moves right
+                        if (_progress > 0.05)
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: glowAlpha),
+                            blurRadius: glowBlur,
+                            spreadRadius: glowSpread,
+                          ),
+                      ],
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      transitionBuilder: (child, anim) =>
+                          ScaleTransition(scale: anim, child: child),
+                      child: Icon(
+                        showCheck
+                            ? Icons.check_rounded
+                            : Icons.arrow_forward_ios_rounded,
+                        key: ValueKey<bool>(showCheck),
+                        color: Colors.black,
+                        size: showCheck ? 26 : 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Left edge fade overlay ─────────────────────────────────
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 20,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF1A1A1A).withValues(alpha: 0.7),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Right edge fade overlay ────────────────────────────────
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: 20,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          const Color(0xFF1A1A1A).withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Staggered text line animation
 // ─────────────────────────────────────────────────────────────────────────────
 class _StaggeredLine extends StatelessWidget {
   final AnimationController controller;
