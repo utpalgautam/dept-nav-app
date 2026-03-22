@@ -193,8 +193,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                 decoration: InputDecoration(
                                   hintText: _getSearchHint(),
                                   hintStyle: const TextStyle(
-                                    color: Color(0xFFAAAAAA),
+                                    color: Color(0xFF9E9E9E),
                                     fontSize: 14,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                   border: InputBorder.none,
                                   isDense: true,
@@ -786,13 +787,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       ),
     );
   }
-
   Widget _buildNavigateButton(String locationId, BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final navigator = Navigator.of(context, rootNavigator: true);
-        final scaffoldMessenger = ScaffoldMessenger.of(context);
-
         try {
           // Show loading indicator
           showDialog(

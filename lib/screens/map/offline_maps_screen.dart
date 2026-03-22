@@ -26,7 +26,7 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   String _searchQuery = '';
   Set<String> _downloadedBuildingIds = {};
   bool _isLoadingIds = true;
-  Set<String> _downloadingIds = {};
+  final Set<String> _downloadingIds = {};
 
   @override
   void initState() {
