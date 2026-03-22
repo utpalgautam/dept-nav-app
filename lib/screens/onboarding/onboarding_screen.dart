@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../main.dart' show kHasSeenOnboarding;
 import '../auth/login_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Navigation ─────────────────────────────────────────────────────────────
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_complete', true);
+    await prefs.setBool(kHasSeenOnboarding, true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(PageRouteBuilder(
       pageBuilder: (_, anim, __) => const LoginScreen(),
