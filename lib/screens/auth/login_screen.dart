@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart' as app_auth;
+import '../../main.dart' show AuthWrapper;
 import '../onboarding/onboarding_screen.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
@@ -37,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    debugPrint("Sign In clicked");
     if (!_formKey.currentState!.validate()) return;
     
     // Hide keyboard
@@ -51,6 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (ok) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('remember_me', _rememberMe);
+      if (mounted) {
+        // Enforce root navigator reset to handle AuthWrapper (important after onboarding)
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthWrapper(hasSeenOnboarding: true)),
+          (route) => false,
+        );
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -133,11 +142,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Google Sign In Button
                       _ScaleButton(
                         onTap: auth.isLoading ? null : () async {
+                          debugPrint('Google Sign-In clicked');
                           final appAuth = context.read<app_auth.AuthProvider>();
                           final ok = await appAuth.signInWithGoogle();
                           if (ok) {
                             final prefs = await SharedPreferences.getInstance();
                             await prefs.setBool('remember_me', _rememberMe);
+                            if (context.mounted) {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (_) => const AuthWrapper(hasSeenOnboarding: true)),
+                                (route) => false,
+                              );
+                            }
                           } else if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -436,7 +452,6 @@ class _ScaleButtonState extends State<_ScaleButton> with SingleTickerProviderSta
 
   void _onTapUp(TapUpDetails details) {
     if (widget.onTap != null) _controller.reverse();
-    widget.onTap?.call();
   }
 
   void _onTapCancel() {
@@ -449,6 +464,7 @@ class _ScaleButtonState extends State<_ScaleButton> with SingleTickerProviderSta
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: ScaleTransition(
         scale: _scaleAnimation,
