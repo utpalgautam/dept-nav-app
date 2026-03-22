@@ -12,7 +12,6 @@ import '../navigation/indoor_navigation_setup_screen.dart';
 import '../map/offline_maps_screen.dart';
 import 'change_password_screen.dart';
 import 'recent_searches_screen.dart';
-import 'saved_locations_screen.dart';
 import 'edit_details_screen.dart';
 import '../../main.dart';
 import '../../providers/security_provider.dart';
@@ -143,23 +142,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // --- Sections ---
               _buildSectionTitle('Activity'),
               _buildCardContainer([
-                InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SavedLocationsScreen(),
-                      ),
-                    );
-                  },
-                  child: _buildListTile(
-                    title: 'Saved Locations',
-                    icon: Icons.bookmark,
-                    iconColor: Colors.blue[600]!,
-                    iconBgColor: Colors.blue[50]!,
-                  ),
-                ),
-                const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
                 InkWell(
                   onTap: () {
                     Navigator.push(
