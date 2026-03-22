@@ -1,8 +1,39 @@
 // src/services/analyticsService.js
 import { db } from './firebaseConfig';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const SEARCH_LOGS_COLLECTION = 'searchLogs';
+
+/**
+ * ─────────────────────────────────────────────────────
+ * WRITE — Call this from the navigation app whenever
+ * a user searches for / navigates to a destination.
+ *
+ * Document shape written to Firestore:
+ * {
+ *   buildingId:   string   – Firestore doc ID of the building
+ *   buildingName: string   – Human-readable name (used in charts)
+ *   query:        string   – What the user typed (optional)
+ *   timestamp:    Timestamp – serverTimestamp()
+ *   platform:     string   – 'web' | 'mobile'
+ * }
+ * ─────────────────────────────────────────────────────
+ */
+export const logSearch = async (buildingId, buildingName, query = '', platform = 'web') => {
+    try {
+        await addDoc(collection(db, SEARCH_LOGS_COLLECTION), {
+            buildingId,
+            buildingName,
+            query,
+            timestamp: serverTimestamp(),
+            platform,
+        });
+    } catch (err) {
+        // Non-blocking — analytics failures must never break the app
+        console.warn('logSearch failed (non-critical):', err);
+    }
+};
+
 
 /**
  * Get total searches grouped by building name with timeframe filtering.

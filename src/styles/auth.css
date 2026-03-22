@@ -1,0 +1,508 @@
+/* src/styles/auth.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Full-page wrapper ── */
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1c1c1e;
+    padding: 1.5rem;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Outer card (the rounded rectangle from the screenshots) ── */
+.auth-card {
+    display: flex;
+    width: 100%;
+    max-width: 860px;
+    min-height: 520px;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.45);
+    border: 2px solid #2e2e2e;
+}
+
+/* ── Left white panel ── */
+.auth-left {
+    flex: 1;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2.5rem;
+}
+
+.auth-left-inner {
+    width: 100%;
+    max-width: 380px;
+}
+
+/* ── Headings ── */
+.auth-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #111111;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.35rem;
+    line-height: 1.2;
+}
+
+.auth-subtitle {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 1.75rem;
+    font-weight: 400;
+}
+
+/* ── Alert boxes ── */
+.auth-error {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    margin-bottom: 1.2rem;
+}
+
+.auth-success {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    margin-bottom: 1.2rem;
+}
+
+/* ── Form ── */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.auth-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #111111;
+    margin-bottom: 0.45rem;
+}
+
+/* Pill-shaped input — exactly matches screenshots */
+.auth-input {
+    width: 100%;
+    padding: 0.72rem 1.25rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #111;
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-input::placeholder {
+    color: #c9cdd6;
+}
+
+.auth-input:focus {
+    border-color: #aaa;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Remember me row ── */
+.auth-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.auth-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.85rem;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Toggle switch */
+.auth-toggle {
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: #d1d5db;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+
+.auth-toggle--on {
+    background: #1c1c1e;
+}
+
+.auth-toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    transition: transform 0.25s ease;
+}
+
+.auth-toggle--on .auth-toggle-knob {
+    transform: translateX(18px);
+}
+
+/* Forgot password — text button */
+.auth-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    color: #374151;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 400;
+    text-decoration: none;
+}
+
+.auth-link-btn:hover {
+    color: #111;
+    text-decoration: underline;
+}
+
+/* ── Primary button — black pill ── */
+.auth-btn-primary {
+    width: 100%;
+    padding: 0.82rem 1.5rem;
+    background: #111111;
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    font-size: 0.925rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.01em;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+    background: #2d2d2d;
+    transform: translateY(-1px);
+}
+
+.auth-btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.auth-btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ── Outline button (Already have an account?) ── */
+.auth-btn-outline {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 400;
+    font-family: inherit;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    margin-top: 0.5rem;
+}
+
+.auth-btn-outline:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+}
+
+.auth-btn-outline strong {
+    font-weight: 700;
+    color: #111;
+}
+
+/* ── Footer text ── */
+.auth-footer-text {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.auth-link-strong {
+    color: #111111;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.auth-link-strong:hover {
+    text-decoration: underline;
+}
+
+/* ── Right dark panel ── */
+.auth-right {
+    width: 42%;
+    flex-shrink: 0;
+    background: #1c1c1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border-radius: 0 26px 26px 0;
+}
+
+.auth-illustration {
+    width: 100%;
+    max-width: 340px;
+    height: auto;
+}
+
+/* ── Loading screen (shown while auth state resolves) ── */
+.auth-loading {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1c1c1e;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    gap: 0.75rem;
+}
+
+.auth-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .auth-card {
+        flex-direction: column;
+        max-width: 420px;
+    }
+    .auth-right {
+        width: 100%;
+        border-radius: 0 0 26px 26px;
+        padding: 1.5rem;
+        min-height: 200px;
+    }
+    .auth-left {
+        padding: 2rem 1.5rem;
+    }
+}
+
+/* =============================================
+   SIDEBAR — bottom section & logout button
+   ============================================= */
+.sidebar-bottom {
+    margin-top: auto;
+    padding-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar-logout-btn {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: #8a8f9a;
+    cursor: pointer;
+    font-size: 1.15rem;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-logout-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* =============================================
+   LOGOUT CONFIRMATION MODAL
+   ============================================= */
+.logout-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeInOverlay 0.18s ease;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.logout-modal {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 2.25rem 2rem 2rem;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    animation: slideUpModal 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+@keyframes slideUpModal {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Red icon circle */
+.logout-modal-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.logout-modal-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #111111;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.3px;
+}
+
+.logout-modal-body {
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.55;
+    font-family: 'Inter', sans-serif;
+    max-width: 290px;
+}
+
+.logout-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 0.75rem;
+}
+
+/* Cancel — outline */
+.logout-btn-cancel {
+    flex: 1;
+    padding: 0.72rem 1rem;
+    border-radius: 999px;
+    border: 1.5px solid #e5e7eb;
+    background: transparent;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.logout-btn-cancel:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.logout-btn-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Confirm — red filled */
+.logout-btn-confirm {
+    flex: 1;
+    padding: 0.72rem 1rem;
+    border-radius: 999px;
+    border: none;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.logout-btn-confirm:hover:not(:disabled) {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.logout-btn-confirm:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.logout-btn-confirm:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Spinner inside confirm button */
+.logout-spinner {
+    width: 15px;
+    height: 15px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
