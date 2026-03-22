@@ -143,10 +143,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               // --- Header (Avatar & Name) ---
               _buildProfileHeader(user?.name ?? 'Guest User', user?.userType?.name ?? 'User'),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               
               // --- Sections ---
               _buildSectionTitle('Activity'),
@@ -168,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ]),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               
               _buildSectionTitle('Security'),
               _buildCardContainer([
@@ -218,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
               ]),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               
               _buildSectionTitle('Preferences'),
               _buildCardContainer([
@@ -252,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
                 _buildWalkingSpeedRow(),
               ]),
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
               
               // --- Log Out Button ---
               GestureDetector(
@@ -268,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 120), // Bottom padding for nav bar
+              const SizedBox(height: 80), // Bottom padding for nav bar
             ],
           ),
         ),
@@ -332,8 +332,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           alignment: Alignment.bottomRight,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.pastelOrange,
@@ -368,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Text(
           name,
           style: const TextStyle(
@@ -377,7 +377,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.black,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           subtitle,
           style: const TextStyle(
@@ -386,7 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         GestureDetector(
           onTap: () {
             Navigator.push(
