@@ -116,14 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     duration: const Duration(milliseconds: 3200),
   );
 
-  // ── Button press scale ─────────────────────────────────────────────────────
-  late final AnimationController _btnCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 110),
-  );
-  late final Animation<double> _btnScale =
-      Tween<double>(begin: 1.0, end: 0.88).animate(
-          CurvedAnimation(parent: _btnCtrl, curve: Curves.easeInOut));
+  bool _navigating = false;
 
   @override
   void initState() {
@@ -134,6 +127,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _textCtrl.forward(); // start text after panel appears
     });
     _swayCtrl.repeat(reverse: true);
+    _pageController.addListener(() {
+      if (!_pageController.hasClients || !_pageController.position.haveDimensions) return;
+      final page = _pageController.page ?? 0.0;
+      if (page >= _pages.length - 1 && !_navigating) {
+        _navigating = true;
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted && (_pageController.page ?? 0.0) >= _pages.length - 1) {
+            _completeOnboarding();
+          } else {
+            _navigating = false;
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -142,7 +149,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _entranceCtrl.dispose();
     _textCtrl.dispose();
     _swayCtrl.dispose();
-    _btnCtrl.dispose();
     super.dispose();
   }
 
@@ -157,19 +163,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           FadeTransition(opacity: anim, child: child),
       transitionDuration: const Duration(milliseconds: 500),
     ));
-  }
-
-  Future<void> _nextPage() async {
-    HapticFeedback.lightImpact();
-    await _btnCtrl.forward();
-    await _btnCtrl.reverse();
-    if (_currentPage < _pages.length - 1) {
-      _pageController.nextPage(
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOutCubic);
-    } else {
-      await _completeOnboarding();
-    }
   }
 
   void _onPageChanged(int idx) {
@@ -431,7 +424,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // Bottom navigation bar
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildBottomBar() {
-    final isLast = _currentPage == _pages.length - 1;
     const double barHeight = 68.0;
     const double iconSize = 52.0;
     const double edgePad = 8.0;
@@ -452,9 +444,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalWidth = constraints.maxWidth;
-          // Track runs from left icon start to right button start
-          // Left anchor: center of icon at its resting left position
-          // Right anchor: center of the right button
+          // Track runs from left icon start to right edge of slider
           const double trackLeft = edgePad + iconSize / 2;
           final double trackRight = totalWidth - edgePad - iconSize / 2;
           final double trackSpan = trackRight - trackLeft;
@@ -462,64 +452,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
           return Stack(
             children: [
-              // ── Dot indicators (static background track) ─────────────────
-              Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _pageController,
-                  builder: (context, _) {
-                    double page = _currentPage.toDouble();
-                    if (_pageController.hasClients &&
-                        _pageController.position.haveDimensions) {
-                      page = _pageController.page ?? page;
-                    }
-                    double fraction = page % 1.0;
-                    bool isMoving = (fraction > 0.01 && fraction < 0.99);
-
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Space for the left icon
-                        const SizedBox(width: iconSize + edgePad * 2),
-                        ...List.generate(_pages.length, (i) {
-                          double dist = (page - i).abs().clamp(0.0, 1.0);
-                          double curvedDist =
-                              Curves.easeInOutCubic.transform(dist);
-                          double w = 8.0 + (18.0 * (1.0 - curvedDist));
-                          double alpha = 0.28 + (0.72 * (1.0 - curvedDist));
-                          bool isHero = i == page.round();
-
-                          return Transform.scale(
-                            scale: (isHero && isMoving) ? 1.12 : 1.0,
-                            child: Container(
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 3),
-                              width: w,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: Colors.white.withValues(alpha: alpha),
-                                boxShadow: (isHero && isMoving)
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.3),
-                                          blurRadius: 4,
-                                          spreadRadius: 1,
-                                        )
-                                      ]
-                                    : [],
-                              ),
-                            ),
-                          );
-                        }),
-                        // Space for the right button
-                        const SizedBox(width: iconSize + edgePad * 2),
-                      ],
-                    );
-                  },
-                ),
-              ),
-
               // ── Sliding white walking circle (draggable) ─────────────────
               AnimatedBuilder(
                 animation: _pageController,
@@ -537,10 +469,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   double t = (page / maxPage).clamp(0.0, 1.0);
                   double xCenter = trackLeft + t * trackSpan;
                   double topOffset = (barHeight - iconSize) / 2;
+                  
+                  bool isDone = t > 0.99;
 
                   return Positioned(
-                    left: xCenter - iconSize / 2,
-                    top: topOffset,
+                    left: xCenter - (iconSize + 10) / 2,
+                    top: topOffset - 5,
+                    width: iconSize + 10,
+                    height: iconSize + 10,
                     // GestureDetector wraps only the icon for drag control
                     child: GestureDetector(
                       onHorizontalDragStart: (_) {
@@ -563,88 +499,56 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         final currentPage = _pageController.page!;
                         final velocity = details.primaryVelocity ?? 0;
                         int targetPage;
-                        if (velocity > 800) {
-                          targetPage = (currentPage - 1).ceil().clamp(0, _pages.length - 1);
-                        } else if (velocity < -800) {
+                        // For the slider icon, dragging RIGHT is positive velocity, which increases the page
+                        if (velocity > 300) {
                           targetPage = (currentPage + 1).floor().clamp(0, _pages.length - 1);
+                        } else if (velocity < -300) {
+                          targetPage = (currentPage - 1).ceil().clamp(0, _pages.length - 1);
                         } else {
                           targetPage = currentPage.round().clamp(0, _pages.length - 1);
                         }
-                        if (targetPage == _pages.length - 1 &&
-                            currentPage >= (_pages.length - 1) - 0.05 &&
-                            velocity < -800) {
-                          _completeOnboarding();
-                        } else {
-                          HapticFeedback.selectionClick();
-                          _pageController.animateToPage(
-                            targetPage,
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeOutCubic,
-                          );
-                        }
+                        
+                        HapticFeedback.selectionClick();
+                        _pageController.animateToPage(
+                          targetPage,
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeOutCubic,
+                        );
                       },
-                      child: Transform.scale(
-                        scale: isMoving ? 1.06 : 1.0,
-                        child: Container(
-                          width: iconSize,
-                          height: iconSize,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutBack,
+                          width: isDone ? iconSize + 8 : iconSize,
+                          height: isDone ? iconSize + 8 : iconSize,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            boxShadow: isMoving
-                                ? [
-                                    BoxShadow(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.25),
-                                      blurRadius: 12,
-                                      spreadRadius: 2,
-                                    )
-                                  ]
-                                : [],
+                            boxShadow: [
+                              if (isMoving || isDone)
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: isDone ? 0.5 : 0.25),
+                                  blurRadius: isDone ? 18 : 12,
+                                  spreadRadius: isDone ? 4 : 2,
+                                )
+                            ],
                           ),
-                          child: const Icon(Icons.directions_walk_rounded,
-                              color: Colors.black, size: 26),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            transitionBuilder: (child, animation) =>
+                                ScaleTransition(scale: animation, child: FadeTransition(opacity: animation, child: child)),
+                            child: Icon(
+                              isDone ? Icons.check_rounded : Icons.directions_walk_rounded,
+                              key: ValueKey<bool>(isDone),
+                              color: Colors.black,
+                              size: isDone ? 30 : 26,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   );
                 },
-              ),
-
-              // ── Next / Done button (fixed right) ─────────────────────────
-              Positioned(
-                right: edgePad,
-                top: (barHeight - iconSize) / 2,
-                child: ScaleTransition(
-                  scale: _btnScale,
-                  child: GestureDetector(
-                    onTap: _nextPage,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeInOut,
-                      width: iconSize,
-                      height: iconSize,
-                      decoration: BoxDecoration(
-                        color:
-                            isLast ? Colors.white : const Color(0xFF383838),
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 280),
-                        transitionBuilder: (child, anim) =>
-                            ScaleTransition(scale: anim, child: child),
-                        child: Icon(
-                          isLast
-                              ? Icons.check_rounded
-                              : Icons.arrow_forward_ios_rounded,
-                          key: ValueKey<bool>(isLast),
-                          color: isLast ? Colors.black : Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ),
             ],
           );
