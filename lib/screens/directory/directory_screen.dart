@@ -787,13 +787,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       ),
     );
   }
-
   Widget _buildNavigateButton(String locationId, BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final navigator = Navigator.of(context, rootNavigator: true);
-        final scaffoldMessenger = ScaffoldMessenger.of(context);
-
         try {
           // Show loading indicator
           showDialog(

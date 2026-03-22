@@ -159,9 +159,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!mounted) return;
     Navigator.of(context).pushReplacement(PageRouteBuilder(
       pageBuilder: (_, anim, __) => const LoginScreen(),
-      transitionsBuilder: (_, anim, __, child) =>
-          FadeTransition(opacity: anim, child: child),
-      transitionDuration: const Duration(milliseconds: 500),
+      transitionsBuilder: (_, anim, __, child) {
+        final tween = Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero)
+            .chain(CurveTween(curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: anim.drive(tween),
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 600),
     ));
   }
 
