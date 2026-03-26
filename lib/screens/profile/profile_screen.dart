@@ -198,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconBgColor: Colors.blueGrey[50]!,
                       trailing: Switch(
                         value: security.isDeviceLockEnabled,
-                        activeThumbColor: Colors.white,
+                        activeColor: Colors.white,
                         activeTrackColor: Colors.blue[600],
                         onChanged: (value) async {
                           if (value) {
@@ -306,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await auth.logout();
                 if (mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const AuthWrapper()),
+                    MaterialPageRoute(builder: (context) => const AuthWrapper(hasSeenOnboarding: true)),
                     (route) => false,
                   );
                 }
