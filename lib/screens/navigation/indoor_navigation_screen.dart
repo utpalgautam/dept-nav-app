@@ -308,13 +308,30 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
         }
       }
 
-      // Start Marker
+      // Highlight next segment if PDR is enabled
+      final navProvider = Provider.of<NavigationProvider>(context, listen: false);
+      if (navProvider.isPdrEnabled) {
+        final segment = navProvider.nextIndoorSegment;
+        if (segment != null) {
+          overlays.write(
+              '<polyline points="${segment.x1},${segment.y1} ${segment.x2},${segment.y2}" stroke="#2563eb" stroke-width="24" fill="none" stroke_linecap="round" stroke_linejoin="round" />');
+          // Add a white core for better visibility
+          overlays.write(
+              '<polyline points="${segment.x1},${segment.y1} ${segment.x2},${segment.y2}" stroke="#93c5fd" stroke-width="8" fill="none" stroke_linecap="round" stroke_linejoin="round" />');
+        }
+      }
+
+      // Start Marker (only if PDR is off)
       final start = _currentPath.first;
-      overlays.write(
-          '<circle cx="${start.x}" cy="${start.y}" r="16" fill="#bfdbfe" fill-opacity="0.8" />');
-      overlays.write(
-          '<circle cx="${start.x}" cy="${start.y}" r="8" fill="#2563eb" />');
+      if (!navProvider.isPdrEnabled) {
+        overlays.write(
+            '<circle cx="${start.x}" cy="${start.y}" r="16" fill="#bfdbfe" fill-opacity="0.8" />');
+        overlays.write(
+            '<circle cx="${start.x}" cy="${start.y}" r="8" fill="#2563eb" />');
+      }
     }
+
+    // User marker logic moved to _buildUserMarker() (Flutter widget for smooth animation)
 
     // Debug Nodes
     if (_isDebugMode && _currentGraph != null) {
@@ -647,7 +664,204 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        // PDR Mode Toggle
+        Consumer<NavigationProvider>(
+          builder: (context, navProvider, child) {
+            bool isPdr = navProvider.isPdrEnabled;
+            return GestureDetector(
+              onTap: () {
+                if (!isPdr) {
+                  // Enable PDR: Start at the beginning of the path
+                  if (_currentPath.isNotEmpty) {
+                    navProvider.setIndoorPdrEnabled(true, 
+                      startX: _currentPath.first.x, 
+                      startY: _currentPath.first.y,
+                      graph: _currentGraph,
+                    );
+                    navProvider.setIndoorPath(_currentPath);
+                  }
+                } else {
+                  navProvider.setIndoorPdrEnabled(false);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isPdr ? const Color(0xFF10B981) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isPdr ? const Color(0xFF10B981) : Colors.black12,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.directions_walk_rounded,
+                      size: 14,
+                      color: isPdr ? Colors.white : Colors.black87,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'PDR Mode',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isPdr ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        // Map Rotation Toggle
+        Consumer<NavigationProvider>(
+          builder: (context, navProvider, child) {
+            bool isRotating = navProvider.isMapRotationEnabled;
+            return GestureDetector(
+              onTap: () => navProvider.toggleMapRotation(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isRotating ? const Color(0xFF3B82F6) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isRotating ? const Color(0xFF3B82F6) : Colors.black12,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.explore_rounded,
+                      size: 14,
+                      color: isRotating ? Colors.white : Colors.black87,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Compass',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isRotating ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        // Voice Navigation Toggle
+        Consumer<NavigationProvider>(
+          builder: (context, navProvider, child) {
+            bool isVoice = navProvider.isVoiceEnabled;
+            return GestureDetector(
+              onTap: () => navProvider.toggleVoice(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isVoice ? const Color(0xFFF59E0B) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isVoice ? const Color(0xFFF59E0B) : Colors.black12,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isVoice
+                          ? Icons.volume_up_rounded
+                          : Icons.volume_off_rounded,
+                      size: 14,
+                      color: isVoice ? Colors.white : Colors.black87,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Voice',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isVoice ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        // Reset Position
+        GestureDetector(
+          onTap: () {
+            context.read<NavigationProvider>().resetIndoorPosition();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Position reset to start")),
+            );
+          },
+          child: _buildToggleButton(Icons.restart_alt_rounded, "Reset"),
+        ),
       ],
+    );
+  }
+
+  Widget _buildToggleButton(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        border: Border.all(color: Colors.black12, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.black87),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+        ],
+      ),
     );
   }
 
@@ -691,17 +905,53 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  _isDebugMode && _errorMessage != null
-                      ? _errorMessage!
-                      : _currentInstruction,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _isDebugMode && _errorMessage != null
-                        ? Colors.red
-                        : Colors.black,
-                  ),
+                Consumer<NavigationProvider>(
+                  builder: (context, navProv, child) {
+                    return Text(
+                      _isDebugMode && _errorMessage != null
+                          ? _errorMessage!
+                          : (navProv.isPdrEnabled ? navProv.currentIndoorInstruction : _currentInstruction),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _isDebugMode && _errorMessage != null
+                            ? Colors.red
+                            : Colors.black,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 4),
+                Consumer<NavigationProvider>(
+                  builder: (context, navProvider, child) {
+                    bool isPdr = navProvider.isPdrEnabled;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isPdr ? const Color(0xFF10B981).withOpacity(0.1) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isPdr ? Icons.sensors : Icons.location_off,
+                            size: 10,
+                            color: isPdr ? const Color(0xFF10B981) : Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isPdr ? 'PDR Active' : 'Static Mode',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isPdr ? const Color(0xFF10B981) : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -744,21 +994,6 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       final double screenW = outerConstraints.maxWidth;
       final double screenH = outerConstraints.maxHeight;
 
-      // Build the Matrix4 transform depending on the mode
-      final Matrix4 transform = Matrix4.identity()
-        ..setEntry(3, 2, 0.001)
-        ..translate(_panX, _panY);
-      if (_is3DMode) {
-        transform
-          ..rotateX(_tiltAngle)
-          ..scale(_scale)
-          ..rotateZ(_rotationZ);
-      } else {
-        transform
-          ..scale(_scale)
-          ..rotateZ(_rotationZ);
-      }
-
       // Compute where the AspectRatio widget renders within screenW x screenH
       final double ratio = mapWidth / mapHeight;
       final double displayW, displayH, mapLeft, mapTop;
@@ -772,89 +1007,202 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       mapLeft = (screenW - displayW) / 2.0;
       mapTop = (screenH - displayH) / 2.0;
 
-      return GestureDetector(
-        onScaleStart: (details) {
-          _baseScale = _scale;
-          _baseRotation = _rotationZ;
-        },
-        onScaleUpdate: (details) {
-          setState(() {
-            _panX += details.focalPointDelta.dx;
-            _panY += details.focalPointDelta.dy;
-            _scale = (_baseScale * details.scale).clamp(0.5, 6.0);
-            _rotationZ = _baseRotation + details.rotation;
-          });
-        },
-        child: ClipRRect(
-          child: Container(
-            color: const Color(0xFFF5F5F5),
-            child: Stack(
-              children: [
-                // Map + route + destination pin + 2D labels (inside Transform)
-                Positioned.fill(
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: transform,
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: mapWidth / mapHeight,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final double w = constraints.maxWidth;
-                            final double h = constraints.maxHeight;
-                            return Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                SvgPicture.string(
-                                  processedSvg,
-                                  fit: BoxFit.contain,
+      return Consumer<NavigationProvider>(
+        builder: (context, navProvider, child) {
+          double targetRotation = _rotationZ;
+          if (navProvider.isMapRotationEnabled) {
+            // Target rotation for "Heading Up"
+            targetRotation = -navProvider.currentHeading - math.pi / 2;
+          }
+
+          return GestureDetector(
+            onScaleStart: (details) {
+              _baseScale = _scale;
+              _baseRotation = _rotationZ;
+            },
+            onScaleUpdate: (details) {
+              if (navProvider.isMapRotationEnabled) return;
+              setState(() {
+                _panX += details.focalPointDelta.dx;
+                _panY += details.focalPointDelta.dy;
+                _scale = (_baseScale * details.scale).clamp(0.5, 6.0);
+                _rotationZ = _baseRotation + details.rotation;
+              });
+            },
+            child: ClipRRect(
+              child: Container(
+                color: const Color(0xFFF5F5F5),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: targetRotation, end: targetRotation),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, animRot, child) {
+                          final Matrix4 currentTransform = Matrix4.identity()
+                            ..setEntry(3, 2, 0.001)
+                            ..translate(_panX, _panY);
+                          
+                          if (_is3DMode) {
+                            currentTransform
+                              ..rotateX(_tiltAngle)
+                              ..scale(_scale)
+                              ..rotateZ(animRot);
+                          } else {
+                            currentTransform
+                              ..scale(_scale)
+                              ..rotateZ(animRot);
+                          }
+
+                          return Transform(
+                            alignment: Alignment.center,
+                            transform: currentTransform,
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: mapWidth / mapHeight,
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final double w = constraints.maxWidth;
+                                    final double h = constraints.maxHeight;
+                                    return Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        SvgPicture.string(
+                                          processedSvg,
+                                          fit: BoxFit.contain,
+                                        ),
+                                        if (_currentPath.isNotEmpty)
+                                          Positioned(
+                                            left: (_currentPath.last.x / mapWidth) * w - 24,
+                                            top: (_currentPath.last.y / mapHeight) * h - 48,
+                                            child: Transform(
+                                              alignment: Alignment.bottomCenter,
+                                              transform: Matrix4.identity()
+                                                ..rotateZ(-animRot)
+                                                ..rotateX(_is3DMode ? -_tiltAngle : 0),
+                                              child: const Icon(
+                                                Icons.location_on,
+                                                color: Colors.black,
+                                                size: 48,
+                                              ),
+                                            ),
+                                          ),
+                                        // NEW: Animated User Marker
+                                        _buildUserMarker(w, h, mapWidth, mapHeight, animRot),
+                                        if (_showLabels && !_is3DMode)
+                                          ..._build2DLabelOverlays(mapWidth, mapHeight, w, h),
+                                      ],
+                                    );
+                                  },
                                 ),
-                                if (_currentPath.isNotEmpty)
-                                  Positioned(
-                                    left: (_currentPath.last.x / mapWidth) * w - 24,
-                                    top: (_currentPath.last.y / mapHeight) * h - 48,
-                                    child: Transform(
-                                      alignment: Alignment.bottomCenter,
-                                      transform: Matrix4.identity()
-                                        ..rotateZ(-_rotationZ)
-                                        ..rotateX(_is3DMode ? -_tiltAngle : 0),
-                                      child: const Icon(
-                                        Icons.location_on,
-                                        color: Colors.black,
-                                        size: 48,
-                                      ),
-                                    ),
-                                  ),
-                                // 2D labels stay inside Transform (they track map)
-                                if (_showLabels && !_is3DMode)
-                                  ..._build2DLabelOverlays(mapWidth, mapHeight, w, h),
-                              ],
-                            );
-                          },
-                        ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  ),
+                    if (_showLabels && _is3DMode)
+                      ..._build3DScreenSpaceLabels(
+                        screenW: screenW,
+                        screenH: screenH,
+                        mapWidth: mapWidth,
+                        mapHeight: mapHeight,
+                        displayW: displayW,
+                        displayH: displayH,
+                        mapLeft: mapLeft,
+                        mapTop: mapTop,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.001)
+                          ..translate(_panX, _panY)
+                          ..rotateX(_tiltAngle)
+                          ..scale(_scale)
+                          ..rotateZ(targetRotation),
+                      ),
+                  ],
                 ),
-                // 3D labels — screen-space overlay, outside Transform
-                if (_showLabels && _is3DMode)
-                  ..._build3DScreenSpaceLabels(
-                    screenW: screenW,
-                    screenH: screenH,
-                    mapWidth: mapWidth,
-                    mapHeight: mapHeight,
-                    displayW: displayW,
-                    displayH: displayH,
-                    mapLeft: mapLeft,
-                    mapTop: mapTop,
-                    transform: transform,
-                  ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     });
+  }
+
+  Widget _buildUserMarker(double w, double h, double mapWidth, double mapHeight, double mapRotation) {
+    return Consumer<NavigationProvider>(
+      builder: (context, navProvider, child) {
+        if (!navProvider.isPdrEnabled || navProvider.indoorX == null || navProvider.indoorY == null) {
+          return const SizedBox.shrink();
+        }
+
+        final double x = navProvider.indoorX!;
+        final double y = navProvider.indoorY!;
+        final double heading = navProvider.currentHeading;
+
+        return TweenAnimationBuilder<Offset>(
+          tween: Tween<Offset>(begin: Offset(x, y), end: Offset(x, y)),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          builder: (context, pos, child) {
+            return Positioned(
+              left: (pos.dx / mapWidth) * w - 30,
+              top: (pos.dy / mapHeight) * h - 30,
+              child: SizedBox(
+                width: 60,
+                height: 60,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: heading, end: heading),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, animatedHeading, child) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Accuracy Circle / Aura
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF3B82F6).withOpacity(0.15),
+                          ),
+                        ),
+                        // Inner Blue Dot
+                        Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: const Color(0xFF3B82F6), width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Direction Arrow
+                        Transform.rotate(
+                          angle: animatedHeading + math.pi / 2, // Rotate relative to map
+                          child: CustomPaint(
+                            size: const Size(20, 20),
+                            painter: _ArrowPainter(),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildBottomPanel() {
@@ -880,12 +1228,19 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${_routeDistanceMeters}m ahead',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Consumer<NavigationProvider>(
+                    builder: (context, navProv, child) {
+                      final distance = navProv.isPdrEnabled 
+                          ? navProv.remainingIndoorDistance 
+                          : _routeDistanceMeters.toDouble();
+                      return Text(
+                        '${distance.toStringAsFixed(0)}m ahead',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -955,6 +1310,27 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       ),
     );
   }
+}
+
+class _ArrowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF3B82F6)
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width * 0.8, size.height * 0.8)
+      ..lineTo(size.width / 2, size.height * 0.6)
+      ..lineTo(size.width * 0.2, size.height * 0.8)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Custom painter for the small downward-pointing triangle (comment box stem)

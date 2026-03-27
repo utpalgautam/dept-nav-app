@@ -48,6 +48,18 @@ class NavigationRoute {
 
 class GraphHopperService {
   final String baseUrl = AppConstants.graphHopperBaseUrl;
+  
+  // ── Simple In-Memory Route Cache ─────────────────────────────────────
+  final Map<String, _CachedRoute> _routeCache = {};
+
+  String _generateCacheKey(LatLng start, LatLng end) {
+    // Round to 5 decimal places (~1.1m precision) to catch nearby reroutes
+    final sLat = start.latitude.toStringAsFixed(5);
+    final sLng = start.longitude.toStringAsFixed(5);
+    final dLat = end.latitude.toStringAsFixed(5);
+    final dLng = end.longitude.toStringAsFixed(5);
+    return "${sLat}_${sLng}_to_${dLat}_${dLng}";
+  }
 
   /// Warms up the server by calling the /info endpoint.
   /// Retries up to 3 times if the request fails, which helps wake up Render's cold start.
@@ -73,6 +85,19 @@ class GraphHopperService {
   }
 
   Future<NavigationRoute?> getRoute(LatLng start, LatLng end) async {
+    final cacheKey = _generateCacheKey(start, end);
+    
+    // 1. Check cache (expire after 5 mins)
+    if (_routeCache.containsKey(cacheKey)) {
+      final cached = _routeCache[cacheKey]!;
+      if (DateTime.now().difference(cached.timestamp).inMinutes < 5) {
+        debugPrint('Returning cached route for $cacheKey');
+        return cached.route;
+      } else {
+        _routeCache.remove(cacheKey);
+      }
+    }
+
     try {
       final url = Uri.parse(
           '$baseUrl/route?'
@@ -102,12 +127,17 @@ class GraphHopperService {
              instructions = instList.map((i) => RouteInstruction.fromJson(i)).toList();
           }
 
-          return NavigationRoute(
+          final route = NavigationRoute(
             coordinates: coordinates,
             distance: (path['distance'] ?? 0.0).toDouble(),
             time: path['time'] ?? 0,
             instructions: instructions,
           );
+
+          // 2. Add to cache
+          _routeCache[cacheKey] = _CachedRoute(route: route, timestamp: DateTime.now());
+          
+          return route;
         } else {
             throw Exception('No path found in response');
         }
@@ -130,13 +160,13 @@ class GraphHopperService {
       // 1. Construct GPX string
       final gpx = _generateGpx(points);
       
-      // 2. Send POST request to /match
-      final url = Uri.parse('$baseUrl/match?profile=car&type=json');
+      // 2. Send POST request to /match (Using profile=foot for campus traversal)
+      final url = Uri.parse('$baseUrl/match?profile=foot&type=json');
       final response = await http.post(
         url,
         body: gpx,
         headers: {'Content-Type': 'application/gpx+xml'},
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 3)); // Fast timeout for responsive fallback
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -179,4 +209,10 @@ class GraphHopperService {
     buffer.writeln('</gpx>');
     return buffer.toString();
   }
+}
+
+class _CachedRoute {
+  final NavigationRoute route;
+  final DateTime timestamp;
+  _CachedRoute({required this.route, required this.timestamp});
 }

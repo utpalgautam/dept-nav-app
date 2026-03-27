@@ -152,4 +152,71 @@ class NavigationUtils {
     }
     return points;
   }
+
+  /// Converts a list of LatLng points to a GeoJSON FeatureCollection Map.
+  static Map<String, dynamic> toGeoJson(List<LatLng> points) {
+    final coordinates = points
+        .map((p) => [p.longitude, p.latitude])
+        .toList();
+    
+    return {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": coordinates,
+          },
+          "properties": {},
+        }
+      ]
+    };
+  }
+}
+
+/// A specialized Kalman Filter for Latitude/Longitude smoothing.
+/// It uses movement velocity and sensor accuracy to reduce GPS jitter.
+class KalmanLatLong {
+  final double _qMetresPerSecond; // Predicted movement noise (e.g. 1.0 - 3.0)
+  double _timeStampMilliseconds = 0.0;
+  double _lat = 0.0;
+  double _lng = 0.0;
+  double _variance = -1.0; // P in Kalman filter: the estimation error covariance
+
+  KalmanLatLong({double qMetresPerSecond = 2.0}) : _qMetresPerSecond = qMetresPerSecond;
+
+  /// Processes a new GPS measurement and returns the smoothed/predicted position.
+  LatLng process(double lat, double lng, double accuracy, int timeStampMs) {
+    if (accuracy < 1.0) accuracy = 1.0; // Sanity floor for accuracy
+
+    if (_variance < 0) {
+      // First measurement: Initialize state
+      _timeStampMilliseconds = timeStampMs.toDouble();
+      _lat = lat;
+      _lng = lng;
+      _variance = accuracy * accuracy;
+    } else {
+      double duration = (timeStampMs - _timeStampMilliseconds).toDouble();
+      if (duration > 0) {
+        // As time passes, the prediction becomes more uncertain (increase variance)
+        _variance += duration * _qMetresPerSecond * _qMetresPerSecond / 1000.0;
+        _timeStampMilliseconds = timeStampMs.toDouble();
+      }
+
+      // 1. Compute Kalman Gain (K = P / (P + R))
+      double k = _variance / (_variance + accuracy * accuracy);
+
+      // 2. Update state with measurement (X = X + K * (Z - X))
+      _lat += k * (lat - _lat);
+      _lng += k * (lng - _lng);
+
+      // 3. Update error covariance (P = (1 - K) * P)
+      _variance = (1.0 - k) * _variance;
+    }
+
+    return LatLng(_lat, _lng);
+  }
+
+  LatLng get currentPosition => LatLng(_lat, _lng);
 }

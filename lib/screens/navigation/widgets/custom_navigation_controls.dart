@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/colors.dart';
 
+/// Google Maps–style dark navigation bottom controls.
 class CustomNavigationControls extends StatefulWidget {
   final bool isNavigating;
   final bool isLoading;
   final String distance;
   final String time;
+  final String? arrivalTime;
   final String instruction;
   final VoidCallback onStartNavigation;
   final VoidCallback onStopNavigation;
@@ -17,6 +18,7 @@ class CustomNavigationControls extends StatefulWidget {
     this.isLoading = false,
     required this.distance,
     required this.time,
+    this.arrivalTime,
     required this.instruction,
     required this.onStartNavigation,
     required this.onStopNavigation,
@@ -24,7 +26,8 @@ class CustomNavigationControls extends StatefulWidget {
   });
 
   @override
-  State<CustomNavigationControls> createState() => _CustomNavigationControlsState();
+  State<CustomNavigationControls> createState() =>
+      _CustomNavigationControlsState();
 }
 
 class _CustomNavigationControlsState extends State<CustomNavigationControls> {
@@ -36,31 +39,28 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
     super.didUpdateWidget(oldWidget);
     if (!widget.isNavigating && oldWidget.isNavigating != widget.isNavigating) {
       _sliderValue = 0.0;
-    } else if (!widget.isNavigating && _sliderValue >= 1.0 && !widget.isLoading) {
-       _sliderValue = 0.0;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isNavigating) {
-      return _buildTrackingControls();
-    } else {
-      return _buildPreviewControls();
-    }
+    return widget.isNavigating
+        ? _buildTrackingControls()
+        : _buildPreviewControls();
   }
 
+  // ── Preview (before navigation starts) ─────────────────────────────────
   Widget _buildPreviewControls() {
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151A2D),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 20,
-            offset: Offset(0, -5),
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
@@ -68,93 +68,70 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
           Text(
             widget.instruction,
             style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: 4),
           const Text(
-            'NIT Calicut, Keralam',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            'NIT Calicut, Kerala',
+            style: TextStyle(fontSize: 13, color: Colors.white54),
           ),
-          const SizedBox(height: 16),
-          
-          // Small mock badges (as seen in the mockup)
+          const SizedBox(height: 20),
           Row(
             children: [
-              Container(
-                height: 24,
-                width: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                height: 24,
-                width: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              _InfoChip(label: widget.time, icon: Icons.access_time_rounded),
+              const SizedBox(width: 10),
+              _InfoChip(label: widget.distance, icon: Icons.straighten_rounded),
             ],
           ),
-          const SizedBox(height: 16),
-          
-          // Image placeholder for destination
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E0E0),
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
           const SizedBox(height: 24),
-          
-          // Custom Slider
-          widget.isLoading 
-            ? const Center(child: CircularProgressIndicator())
-            : _buildSlider(),
+          widget.isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF1A73E8),
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : _buildSwipeSlider(),
         ],
       ),
     );
   }
 
-  Widget _buildSlider() {
+  Widget _buildSwipeSlider() {
     return GestureDetector(
-      onHorizontalDragStart: (details) {
-        setState(() {
-          _isSliding = true;
-        });
-      },
-      onHorizontalDragUpdate: (details) {
+      onHorizontalDragStart: (_) => setState(() => _isSliding = true),
+      onHorizontalDragUpdate: (d) {
         if (!_isSliding) return;
         setState(() {
-          // Calculate percentage based on total width (approx 300) minus handle width (56)
-          _sliderValue += details.primaryDelta! / 250;
-          _sliderValue = _sliderValue.clamp(0.0, 1.0);
+          _sliderValue = (_sliderValue + d.primaryDelta! / 240).clamp(0.0, 1.0);
         });
       },
-      onHorizontalDragEnd: (details) {
-        if (_sliderValue > 0.8) {
-          // Trigger navigation
+      onHorizontalDragEnd: (_) {
+        if (_sliderValue > 0.75) {
           setState(() {
             _sliderValue = 1.0;
             _isSliding = false;
           });
           widget.onStartNavigation();
         } else {
-          // Snap back
           setState(() {
             _sliderValue = 0.0;
             _isSliding = false;
@@ -162,60 +139,67 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
         }
       },
       child: Container(
-        height: 64,
-        width: double.infinity,
+        height: 62,
         decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(32),
+          color: const Color(0xFF1A73E8),
+          borderRadius: BorderRadius.circular(31),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1A73E8).withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            // Text in background
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   const Text(
-                    'Navigate',
+                  const Text(
+                    'Swipe to Navigate',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
                     ),
                   ),
                   Text(
-                    '${widget.time} walk • ${widget.distance}',
+                    '${widget.time} • ${widget.distance}',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
             ),
-            // Right Arrow
             const Positioned(
-              right: 24,
+              right: 22,
               top: 0,
               bottom: 0,
-              child: Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+              child: Icon(Icons.chevron_right, color: Colors.white70, size: 18),
             ),
-            // Sliding Handle
             Align(
               alignment: Alignment.centerLeft,
-              child: FractionalTranslation(
-                translation: Offset(_sliderValue * 4.5, 0.0), // Multiplier depends on container/handle size ratio
-                child: Container(
-                  margin: const EdgeInsets.only(left: 6),
-                  width: 52,
-                  height: 52,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.navigation, color: Colors.black, size: 24),
-                  ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 80),
+                margin: EdgeInsets.only(
+                  left: 6 + _sliderValue * 190,
+                ),
+                width: 50,
+                height: 50,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.navigation_rounded,
+                  color: Color(0xFF1A73E8),
+                  size: 26,
                 ),
               ),
             ),
@@ -225,128 +209,135 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
     );
   }
 
+  // ── Active Navigation (Google Style Redesign) ──────────────────────────
   Widget _buildTrackingControls() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 32, 28, 40),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 30,
-            offset: Offset(0, -10),
-          ),
-        ],
+        color: Colors.black, // Exact Google style
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Drag handle
+          Container(
+            width: 32,
+            height: 3,
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // 1. Exit Button (X)
+              _CircularIconButton(
+                icon: Icons.close,
+                onTap: widget.onStopNavigation,
+              ),
+
+              // 2. Center Info
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      widget.distance,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
-                        letterSpacing: -1,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          widget.time,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.directions_walk_rounded, 
+                          color: Colors.white54, size: 20),
+                      ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 2),
                     Text(
-                      '${widget.time} ahead',
-                      style: TextStyle(
-                        fontSize: 16,
+                      '${widget.distance} • ${widget.arrivalTime ?? "..."}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white54,
                         fontWeight: FontWeight.w500,
-                        color: Colors.blueGrey[400],
                       ),
                     ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Flow Blue line',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.blueGrey[300],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'To reach\nDestination.',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
+
+              // 3. Navigation Arrow Button
+              _CircularIconButton(
+                icon: Icons.directions_rounded,
+                onTap: widget.onConfirmArrival, // Or a separate route overview action
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: InkWell(
-                    onTap: widget.onConfirmArrival,
-                    borderRadius: BorderRadius.circular(30),
-                    child: const Center(
-                      child: Text(
-                        'Confirm',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: InkWell(
-                    onTap: widget.onStopNavigation,
-                    borderRadius: BorderRadius.circular(30),
-                    child: const Center(
-                      child: Text(
-                        'Exit Navigation',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CircularIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _CircularIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white24, width: 1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 28),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  const _InfoChip({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF1A73E8)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
