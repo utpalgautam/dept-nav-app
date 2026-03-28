@@ -752,10 +752,10 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                       children: [
                         // Profile Image (Rounded Square with white border)
                         Container(
-                          width: MediaQuery.of(context).size.width * 0.20,
-                          height: MediaQuery.of(context).size.width * 0.20,
+                          width: MediaQuery.of(context).size.width * 0.16,
+                          height: MediaQuery.of(context).size.width * 0.16,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: Colors.white, width: 2),
                             color: const Color(0xFF333333),
                             image: photoUrl != null && photoUrl.isNotEmpty
@@ -767,7 +767,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                           ),
                           child: photoUrl == null || photoUrl.isEmpty
                               ? Icon(fallbackIcon,
-                                  color: const Color(0xFFCCCCCC), size: 36)
+                                  color: const Color(0xFFCCCCCC), size: 30)
                               : null,
                         ),
                         const SizedBox(width: 16),
@@ -782,10 +782,10 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                   title,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 8),
