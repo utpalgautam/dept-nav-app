@@ -120,7 +120,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                                     Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => const HomeScreen()));
+                                            builder: (_) =>
+                                                const HomeScreen()));
                                   }
                                 },
                               ),
@@ -165,7 +166,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   delegate: _DirectoryStickySearchBarDelegate(
                     child: Container(
                       color: AppColors.backgroundLight,
-                      padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, right: 24.0),
+                      padding: const EdgeInsets.only(
+                          bottom: 16.0, left: 24.0, right: 24.0),
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(
@@ -184,7 +186,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                           children: [
                             const Padding(
                               padding: EdgeInsets.only(left: 16.0, right: 8.0),
-                              child: Icon(Icons.search, color: Color(0xFF666666)),
+                              child:
+                                  Icon(Icons.search, color: Color(0xFF666666)),
                             ),
                             Expanded(
                               child: TextField(
@@ -318,7 +321,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        var items = snapshot.data ?? [];
+        var items = (snapshot.data ?? []).toList();
         if (_searchQuery.isNotEmpty) {
           items = items
               .where((f) =>
@@ -326,6 +329,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   f.department.toLowerCase().contains(_searchQuery))
               .toList();
         }
+        
+        items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
         if (items.isEmpty) {
           return const Center(child: Text('No faculty found.'));
@@ -376,11 +381,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white, width: 2),
                     color: const Color(0xFF333333),
                   ),
-                  child: ClipOval(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
                     child: imageBytes != null
                         ? Image.memory(
                             imageBytes,
@@ -411,9 +417,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                     faculty.name,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 17,
-                      fontStyle: FontStyle.italic,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -422,9 +428,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                 const SizedBox(width: 8),
                 // Navigation Button with Icon and Text
                 GestureDetector(
-                  onTap: () => _handleNavigationTap(faculty.locationId, context),
+                  onTap: () =>
+                      _handleNavigationTap(faculty.locationId, context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -438,9 +446,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                           'Navigate',
                           style: TextStyle(
                             color: Colors.black,
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -480,11 +487,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: Colors.white, width: 3),
                     color: const Color(0xFF333333),
                   ),
-                  child: ClipOval(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(21),
                     child: imageBytes != null
                         ? Image.memory(
                             imageBytes,
@@ -513,7 +521,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   faculty.name,
                   style: const TextStyle(
                       color: Colors.white,
-                      fontStyle: FontStyle.italic,
                       fontSize: 22,
                       fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
@@ -521,8 +528,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                 const SizedBox(height: 16),
                 const Divider(color: Colors.grey, thickness: 1),
                 const SizedBox(height: 16),
-                _buildDetailRow('Designation:',
-                    faculty.role.isNotEmpty ? faculty.role : faculty.designation),
+                _buildDetailRow(
+                    'Designation:',
+                    faculty.role.isNotEmpty
+                        ? faculty.role
+                        : faculty.designation),
                 const SizedBox(height: 10),
                 _buildDetailRow('Department:', faculty.department),
                 const SizedBox(height: 10),
@@ -539,7 +549,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                       if (snapshot.hasData && snapshot.data != null) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10.0),
-                          child: _buildDetailRow('Building:', snapshot.data!.name),
+                          child:
+                              _buildDetailRow('Building:', snapshot.data!.name),
                         );
                       }
                       return const SizedBox.shrink();
@@ -555,7 +566,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                     'Close',
                     style: TextStyle(
                       color: Colors.redAccent,
-                      fontStyle: FontStyle.italic,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -580,7 +590,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             style: const TextStyle(
               color: Color(0xFF909090),
               fontSize: 14,
-              fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -591,7 +600,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
-              fontStyle: FontStyle.italic,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -612,12 +620,14 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        var items = snapshot.data ?? [];
+        var items = (snapshot.data ?? []).toList();
         if (_searchQuery.isNotEmpty) {
           items = items
               .where((h) => h.name.toLowerCase().contains(_searchQuery))
               .toList();
         }
+        
+        items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
         if (items.isEmpty) {
           return const Center(child: Text('No halls found.'));
@@ -656,7 +666,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        var items = snapshot.data ?? [];
+        var items = (snapshot.data ?? []).toList();
         if (_searchQuery.isNotEmpty) {
           items = items
               .where((l) =>
@@ -664,6 +674,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   l.department.toLowerCase().contains(_searchQuery))
               .toList();
         }
+
+        items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
         if (items.isEmpty) {
           return const Center(child: Text('No labs found.'));
@@ -867,6 +879,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       ),
     );
   }
+
   Widget _buildNavigateButton(String locationId, BuildContext context) {
     return GestureDetector(
       onTap: () => _handleNavigationTap(locationId, context),
@@ -899,7 +912,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
-  Future<void> _handleNavigationTap(String locationId, BuildContext context) async {
+  Future<void> _handleNavigationTap(
+      String locationId, BuildContext context) async {
     try {
       // Show loading indicator
       showDialog(
@@ -915,7 +929,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
         // Log search for analytics
         if (building != null) {
-          final String platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
+          final String platform =
+              kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
 
           await _firestoreService.logSearch(SearchLogModel(
             buildingId: building.id,
