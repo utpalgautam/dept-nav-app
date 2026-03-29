@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import '../../models/building_model.dart';
@@ -22,8 +24,6 @@ class OfflineMapsScreen extends StatefulWidget {
 class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final OfflineStorageService _offlineStorageService = OfflineStorageService();
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   Set<String> _downloadedBuildingIds = {};
   bool _isLoadingIds = true;
   final Set<String> _downloadingIds = {};
@@ -44,23 +44,70 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
     }
   }
 
-  Future<void> _downloadMap(String buildingId) async {
+  Future<void> _downloadMap(BuildingModel building) async {
+    final buildingId = building.id;
+
+    // 0. Check internet connectivity
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No internet connection!!'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() {
       _downloadingIds.add(buildingId);
     });
 
-    // Simulate map download duration
-    await Future.delayed(const Duration(seconds: 2));
-    await _offlineStorageService.markAsDownloaded(buildingId);
+    try {
+      // 1. Fetch and save each floor map from Firestore (forcing server fetch)
+      for (int i = 0; i < building.totalFloors; i++) {
+        final floorData = await _firestoreService.getFloorMap(
+          buildingId,
+          i,
+          source: Source.server,
+        );
+        if (floorData != null) {
+          await _offlineStorageService.saveFloorMap(buildingId, i, floorData);
+        }
+      }
 
-    if (mounted) {
-      setState(() {
-        _downloadingIds.remove(buildingId);
-        _downloadedBuildingIds.add(buildingId);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Map downloaded successfully!')),
-      );
+      // 2. Mark building as downloaded
+      await _offlineStorageService.markAsDownloaded(buildingId);
+
+      if (mounted) {
+        setState(() {
+          _downloadingIds.remove(buildingId);
+          _downloadedBuildingIds.add(buildingId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Map downloaded successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _downloadingIds.remove(buildingId);
+        });
+
+        String errorMessage = 'Error downloading map: $e';
+        if (e is FirebaseException && e.code == 'unavailable') {
+          errorMessage = 'No internet connection!!';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -79,15 +126,9 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query.toLowerCase();
-    });
-  }
 
   void _onNavItemTapped(int index) {
     if (index == 3) return; // already in MAP
@@ -170,58 +211,6 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                   ),
                 ),
 
-                // --- Sticky Search Bar (scrolls up, then pins at top) ---
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _StickySearchBarDelegate(
-                    child: Container(
-                      color: AppColors.backgroundLight,
-                      padding: const EdgeInsets.only(bottom: 16.0, left: 24.0, right: 24.0),
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.backgroundLight,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.black, width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16.0),
-                              child: Icon(Icons.search, color: Color(0xFF666666)),
-                            ),
-                            Expanded(
-                              child: TextField(
-                                controller: _searchController,
-                                onChanged: _onSearchChanged,
-                                decoration: const InputDecoration(
-                                  hintText: 'Search buildings...',
-                                  hintStyle: TextStyle(
-                                    color: Color(0xFFAAAAAA),
-                                    fontSize: 15,
-                                  ),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
 
                 // --- List Body ---
                 SliverPadding(
@@ -355,11 +344,6 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
         }
 
         var buildings = snapshot.data ?? [];
-        if (_searchQuery.isNotEmpty) {
-          buildings = buildings
-              .where((b) => b.name.toLowerCase().contains(_searchQuery))
-              .toList();
-        }
 
         if (buildings.isEmpty) {
           return const SliverToBoxAdapter(
@@ -605,7 +589,7 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                             ],
                           )
                         : ElevatedButton(
-                            onPressed: () => _downloadMap(building.id),
+                            onPressed: () => _downloadMap(building),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.black,
@@ -644,25 +628,3 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   }
 }
 
-class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _StickySearchBarDelegate({required this.child});
-
-  @override
-  double get minExtent => 68.0;
-
-  @override
-  double get maxExtent => 68.0;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(covariant _StickySearchBarDelegate oldDelegate) {
-    return child != oldDelegate.child;
-  }
-}

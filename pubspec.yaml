@@ -38,6 +38,7 @@ dependencies:
   local_auth: ^2.1.6
   flutter_tts: ^4.2.5
   sensors_plus: ^6.1.1
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_lints: ^3.0.0
@@ -46,7 +47,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/maps/
     - assets/icons/
     - assets/images/onboarding/
     - assets/images/
