@@ -87,6 +87,16 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   void dispose() {
     _positionStream?.cancel();
     _markerAnimationController.dispose();
+    
+    // Cleanup navigation provider on screen exit
+    final provider = Provider.of<NavigationProvider>(context, listen: false);
+    provider.removeListener(_onProviderUpdated);
+    
+    // Stop navigation state if we are still in this screen's context
+    if (!provider.isIndoor) {
+       provider.stopNavigation();
+    }
+    
     super.dispose();
   }
 
@@ -150,8 +160,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     final provider = Provider.of<NavigationProvider>(context, listen: false);
 
     if (widget.destLat != null &&
-        widget.destLng != null &&
-        !provider.isNavigating) {
+        widget.destLng != null) {
       provider.previewRoute(
         NavigationPoint(lat: widget.destLat!, lng: widget.destLng!),
         targetBuilding: widget.targetBuilding,
@@ -723,200 +732,208 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
           });
         }
 
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          body: Stack(
-            children: [
-              // ── MapLibre Map (Dark Matter) ─────────────────────────────
-              MaplibreMap(
-                onMapCreated: _onMapCreated,
-                onStyleLoadedCallback: _onStyleLoaded,
-                initialCameraPosition: const CameraPosition(
-                  target: LatLng(AppConstants.campusLat, AppConstants.campusLng),
-                  zoom: AppConstants.defaultMapZoom,
-                  tilt: 45,
-                ),
-                styleString: _NavMapStyle.positron,
-                myLocationEnabled: false, // custom marker for smooth animation
-                myLocationRenderMode: MyLocationRenderMode.normal,
-                compassEnabled: false, // custom compass button
-                attributionButtonPosition: AttributionButtonPosition.bottomLeft,
-                zoomGesturesEnabled: true,
-                rotateGesturesEnabled: true,
-                tiltGesturesEnabled: true,
-                scrollGesturesEnabled: true,
-              ),
-
-              // ── Pre-navigation Destination Header ──────────────────────
-              if (!navProvider.isNavigating)
-                Positioned(
-                  top: 50,
-                  left: 16,
-                  right: 16,
-                  child: StartNavigationHeader(
-                    buildingName: widget.targetBuilding?.name ?? "Building",
-                    floorNumber: _destinationLocation?.floor,
-                    cabinName: widget.destinationName ?? "Cabin",
-                    isSpeaking: navProvider.isSpeaking,
+        return PopScope(
+          canPop: true,
+          onPopInvoked: (didPop) {
+            if (didPop) {
+              navProvider.stopNavigation();
+            }
+          },
+          child: Scaffold(
+            extendBodyBehindAppBar: true,
+            body: Stack(
+              children: [
+                // ── MapLibre Map (Dark Matter) ─────────────────────────────
+                MaplibreMap(
+                  onMapCreated: _onMapCreated,
+                  onStyleLoadedCallback: _onStyleLoaded,
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(AppConstants.campusLat, AppConstants.campusLng),
+                    zoom: AppConstants.defaultMapZoom,
+                    tilt: 45,
                   ),
+                  styleString: _NavMapStyle.positron,
+                  myLocationEnabled: false, // custom marker for smooth animation
+                  myLocationRenderMode: MyLocationRenderMode.normal,
+                  compassEnabled: false, // custom compass button
+                  attributionButtonPosition: AttributionButtonPosition.bottomLeft,
+                  zoomGesturesEnabled: true,
+                  rotateGesturesEnabled: true,
+                  tiltGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
                 ),
-
-              // ── Turn-by-Turn Header ────────────────────────────────────
-              if (navProvider.isNavigating)
-                Positioned(
-                  top: 50,
-                  left: 16,
-                  right: 16,
-                  child: TurnByTurnWidget(
-                    instruction: navProvider.currentInstruction ??
-                        'Head to destination',
-                    distance: navProvider.distanceToNextStep != null
-                        ? (navProvider.distanceToNextStep! < 1000
-                            ? 'In ${navProvider.distanceToNextStep!.toStringAsFixed(0)} m'
-                            : 'In ${(navProvider.distanceToNextStep! / 1000).toStringAsFixed(1)} km')
-                        : '...',
-                    sign: navProvider.currentSign,
-                    nextInstruction: navProvider.nextInstruction,
-                    nextSign: navProvider.nextSign,
-                    isSpeaking: navProvider.isSpeaking,
-                    onClose: () => _stopNavigation(navProvider),
+  
+                // ── Pre-navigation Destination Header ──────────────────────
+                if (!navProvider.isNavigating)
+                  Positioned(
+                    top: 50,
+                    left: 16,
+                    right: 16,
+                    child: StartNavigationHeader(
+                      buildingName: widget.targetBuilding?.name ?? "Building",
+                      floorNumber: _destinationLocation?.floor,
+                      cabinName: widget.destinationName ?? "Cabin",
+                      isSpeaking: navProvider.isSpeaking,
+                    ),
                   ),
-                ),
-
-              // ── Top-Right Floating Button Stack ──────────────────────
-              if (navProvider.isNavigating)
-                SafeArea(
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 16, top: 110),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 1. Compass
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _NavFloatingButton(
-                            child: Transform.rotate(
-                              angle: -_currentBearing * 3.14159265 / 180,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  const Icon(Icons.navigation,
-                                      color: Colors.white, size: 26),
-                                  ClipRect(
-                                    clipper: _TopHalfClipper(),
-                                    child: const Icon(Icons.navigation,
-                                        color: Colors.redAccent, size: 26),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            onTap: _resetNorth,
-                          ),
-                        ),
-                        
-
-                        // 2. Voice Toggle (if navigating)
-                        if (navProvider.isNavigating)
+  
+                // ── Turn-by-Turn Header ────────────────────────────────────
+                if (navProvider.isNavigating)
+                  Positioned(
+                    top: 50,
+                    left: 16,
+                    right: 16,
+                    child: TurnByTurnWidget(
+                      instruction: navProvider.currentInstruction ??
+                          'Head to destination',
+                      distance: navProvider.distanceToNextStep != null
+                          ? (navProvider.distanceToNextStep! < 1000
+                              ? 'In ${navProvider.distanceToNextStep!.toStringAsFixed(0)} m'
+                              : 'In ${(navProvider.distanceToNextStep! / 1000).toStringAsFixed(1)} km')
+                          : '...',
+                      sign: navProvider.currentSign,
+                      nextInstruction: navProvider.nextInstruction,
+                      nextSign: navProvider.nextSign,
+                      isSpeaking: navProvider.isSpeaking,
+                      onClose: () => _stopNavigation(navProvider),
+                    ),
+                  ),
+  
+                // ── Top-Right Floating Button Stack ──────────────────────
+                if (navProvider.isNavigating)
+                  SafeArea(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16, top: 110),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 1. Compass
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _NavFloatingButton(
+                              child: Transform.rotate(
+                                angle: -_currentBearing * 3.14159265 / 180,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    const Icon(Icons.navigation,
+                                        color: Colors.white, size: 26),
+                                    ClipRect(
+                                      clipper: _TopHalfClipper(),
+                                      child: const Icon(Icons.navigation,
+                                          color: Colors.redAccent, size: 26),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              onTap: _resetNorth,
+                            ),
+                          ),
+                          
+  
+                          // 2. Voice Toggle (if navigating)
+                          if (navProvider.isNavigating)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _NavFloatingButton(
+                                child: Icon(
+                                  navProvider.isVoiceEnabled
+                                      ? Icons.volume_up_rounded
+                                      : Icons.volume_off_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                onTap: navProvider.toggleVoice,
+                              ),
+                            ),
+  
+                          // 4. Follow Mode Toggle
+                          if (!navProvider.isNavigating)
+                            _NavFloatingButton(
                               child: Icon(
-                                navProvider.isVoiceEnabled
-                                    ? Icons.volume_up_rounded
-                                    : Icons.volume_off_rounded,
-                                color: Colors.white,
+                                _followMode == MapFollowMode.headingUp
+                                    ? Icons.navigation_rounded
+                                    : Icons.explore_rounded,
+                                color: _followMode == MapFollowMode.headingUp
+                                    ? Colors.blueAccent
+                                    : Colors.white,
                                 size: 24,
                               ),
-                              onTap: navProvider.toggleVoice,
+                              onTap: _toggleFollowMode,
                             ),
-                          ),
-
-                        // 4. Follow Mode Toggle
-                        if (!navProvider.isNavigating)
-                          _NavFloatingButton(
-                            child: Icon(
-                              _followMode == MapFollowMode.headingUp
-                                  ? Icons.navigation_rounded
-                                  : Icons.explore_rounded,
-                              color: _followMode == MapFollowMode.headingUp
-                                  ? Colors.blueAccent
-                                  : Colors.white,
-                              size: 24,
-                            ),
-                            onTap: _toggleFollowMode,
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-
-              // ── Zoom Controls (right-side) ─────────────────────────────
-              if (navProvider.isNavigating)
-                Positioned(
-                  right: 16,
-                  bottom: 160,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _NavFloatingButton(
-                        child: const Icon(Icons.add,
-                            color: Colors.white, size: 24),
-                        onTap: _zoomIn,
-                      ),
-                      const SizedBox(height: 12),
-                      _NavFloatingButton(
-                        child: const Icon(Icons.remove,
-                            color: Colors.white, size: 24),
+  
+                // ── Zoom Controls (right-side) ─────────────────────────────
+                if (navProvider.isNavigating)
+                  Positioned(
+                    right: 16,
+                    bottom: 160,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _NavFloatingButton(
+                          child: const Icon(Icons.add,
+                              color: Colors.white, size: 24),
+                          onTap: _zoomIn,
+                        ),
+                        const SizedBox(height: 12),
+                        _NavFloatingButton(
+                          child: const Icon(Icons.remove,
+                              color: Colors.white, size: 24),
                         onTap: _zoomOut,
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
+                  ),
+  
+                // ── Recenter Button (bottom-left) ──────────────────────────
+                if (!_isCentered)
+                  Positioned(
+                    bottom: navProvider.isNavigating ? 140 : 160,
+                    left: 16,
+                    child: _RecenterPill(onTap: _recenter),
+                  ),
+  
+                // ── Bottom Navigation Controls ─────────────────────────────
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: CustomNavigationControls(
+                    isNavigating: navProvider.isNavigating,
+                    isLoading: navProvider.isLoadingRoute,
+                    instruction: navProvider.isNavigating
+                        ? (navProvider.currentInstruction ?? 'Follow the route')
+                        : (widget.targetBuilding?.name ?? 'Head to Entrance'),
+                    distance: navProvider.distanceToDestination != null
+                        ? (navProvider.distanceToDestination! < 1000
+                            ? '${navProvider.distanceToDestination!.toStringAsFixed(0)} m'
+                            : '${(navProvider.distanceToDestination! / 1000).toStringAsFixed(1)} km')
+                        : '...',
+                    time: navProvider.remainingTime != null
+                        ? '${navProvider.remainingTime} min'
+                        : (navProvider.currentRoute != null
+                            ? '${(navProvider.currentRoute!.time / 60000).ceil()} min'
+                            : '...'),
+                    arrivalTime: navProvider.arrivalTime,
+                    base64Image: widget.targetEntryPoint?.imageUrl ?? widget.targetBuilding?.imageUrl,
+                    onStartNavigation: () => _startNavigation(navProvider),
+                    onStopNavigation: () => _stopNavigation(navProvider),
+                    onConfirmArrival: () =>
+                        navProvider.switchToIndoorNavigation(),
                   ),
                 ),
-
-              // ── Recenter Button (bottom-left) ──────────────────────────
-              if (!_isCentered)
-                Positioned(
-                  bottom: navProvider.isNavigating ? 140 : 160,
-                  left: 16,
-                  child: _RecenterPill(onTap: _recenter),
-                ),
-
-              // ── Bottom Navigation Controls ─────────────────────────────
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: CustomNavigationControls(
-                  isNavigating: navProvider.isNavigating,
-                  isLoading: navProvider.isLoadingRoute,
-                  instruction: navProvider.isNavigating
-                      ? (navProvider.currentInstruction ?? 'Follow the route')
-                      : (widget.targetBuilding?.name ?? 'Head to Entrance'),
-                  distance: navProvider.distanceToDestination != null
-                      ? (navProvider.distanceToDestination! < 1000
-                          ? '${navProvider.distanceToDestination!.toStringAsFixed(0)} m'
-                          : '${(navProvider.distanceToDestination! / 1000).toStringAsFixed(1)} km')
-                      : '...',
-                  time: navProvider.remainingTime != null
-                      ? '${navProvider.remainingTime} min'
-                      : (navProvider.currentRoute != null
-                          ? '${(navProvider.currentRoute!.time / 60000).ceil()} min'
-                          : '...'),
-                  arrivalTime: navProvider.arrivalTime,
-                  base64Image: widget.targetEntryPoint?.imageUrl ?? widget.targetBuilding?.imageUrl,
-                  onStartNavigation: () => _startNavigation(navProvider),
-                  onStopNavigation: () => _stopNavigation(navProvider),
-                  onConfirmArrival: () =>
-                      navProvider.switchToIndoorNavigation(),
-                ),
-              ),
-
-              // ── Arrival Overlay ────────────────────────────────────────
-              if (navProvider.isIndoor) _buildArrivalOverlay(),
-            ],
+  
+                // ── Arrival Overlay ────────────────────────────────────────
+                if (navProvider.isIndoor) _buildArrivalOverlay(),
+              ],
+            ),
           ),
         );
       },

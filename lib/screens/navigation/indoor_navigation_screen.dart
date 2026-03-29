@@ -7,6 +7,7 @@ import '../../services/firestore_service.dart';
 import '../../services/astar_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/navigation_provider.dart';
+import 'floor_transition_screen.dart';
 
 class IndoorNavigationScreen extends StatefulWidget {
   final String buildingId;
@@ -68,6 +69,8 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   @override
   void dispose() {
+    // Ensure navigation is stopped when backing out of indoor screen
+    Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
     super.dispose();
   }
 
@@ -199,25 +202,17 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
   }
 
   void _showStairDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Change Floor', style: TextStyle(color: Colors.white)),
-        content: Text('Please go to Floor ${_destination?.floor}.',
-            style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _switchFloor(_destination?.floor ?? 0);
-            },
-            child: const Text('I am on the new floor',
-                style: TextStyle(color: Colors.blue)),
-          )
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FloorTransitionScreen(
+          currentFloor: _currentFloor,
+          targetFloor: _destination?.floor ?? 0,
+          subInstruction: _currentInstruction.contains('Stairs') ? 'Straight 50m' : _currentInstruction,
+          onConfirm: () {
+            _switchFloor(_destination?.floor ?? 0);
+          },
+        ),
       ),
     );
   }
@@ -533,50 +528,58 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.blue))
-          : Stack(
-              children: [
-                Positioned.fill(
-                  child: _buildMapView(),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16), // Aligns with the icon start in the header
-                            child: _buildNextStepBox(),
-                          ),
-                        ],
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Colors.blue))
+            : Stack(
+                children: [
+                  Positioned.fill(
+                    child: _buildMapView(),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16), // Aligns with the icon start in the header
+                              child: _buildNextStepBox(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                // Toggle buttons: top-right, below the header
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 140,
-                  right: 20,
-                  child: _buildToggleButtons(),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildBottomPanel(),
-                ),
-              ],
-            ),
+                  // Toggle buttons: top-right, below the header
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 140,
+                    right: 20,
+                    child: _buildToggleButtons(),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: _buildBottomPanel(),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -861,7 +864,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
             },
             child: ClipRRect(
               child: Container(
-                color: const Color(0xFFF5F5F5),
+                color: Colors.white,
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -888,45 +891,62 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                           return Transform(
                             alignment: Alignment.center,
                             transform: currentTransform,
-                            child: Center(
-                              child: AspectRatio(
-                                aspectRatio: mapWidth / mapHeight,
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final double w = constraints.maxWidth;
-                                    final double h = constraints.maxHeight;
-                                    return Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        SvgPicture.string(
-                                          processedSvg,
-                                          fit: BoxFit.contain,
-                                        ),
-                                        if (_currentPath.isNotEmpty)
-                                          Positioned(
-                                            left: (_currentPath.last.x / mapWidth) * w - 24,
-                                            top: (_currentPath.last.y / mapHeight) * h - 48,
-                                            child: Transform(
-                                              alignment: Alignment.bottomCenter,
-                                              transform: Matrix4.identity()
-                                                ..rotateZ(-animRot)
-                                                ..rotateX(_is3DMode ? -_tiltAngle : 0),
-                                              child: const Icon(
-                                                Icons.location_on,
-                                                color: Colors.black,
-                                                size: 48,
-                                              ),
-                                            ),
-                                          ),
-                                        // NEW: Animated User Marker
-                                        _buildUserMarker(w, h, mapWidth, mapHeight, animRot),
-                                        if (_showLabels && !_is3DMode)
-                                          ..._build2DLabelOverlays(mapWidth, mapHeight, w, h),
-                                      ],
-                                    );
-                                  },
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // ── Dot-Grid Background (Whiteboard style) ──
+                                OverflowBox(
+                                  minWidth: 5000,
+                                  maxWidth: 5000,
+                                  minHeight: 5000,
+                                  maxHeight: 5000,
+                                  child: CustomPaint(
+                                    size: const Size(5000, 5000),
+                                    painter: _DotGridPainter(),
+                                  ),
                                 ),
-                              ),
+                                // ── The Map ────────────────────────────────
+                                Center(
+                                  child: AspectRatio(
+                                    aspectRatio: mapWidth / mapHeight,
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final double w = constraints.maxWidth;
+                                        final double h = constraints.maxHeight;
+                                        return Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            SvgPicture.string(
+                                              processedSvg,
+                                              fit: BoxFit.contain,
+                                            ),
+                                            if (_currentPath.isNotEmpty)
+                                              Positioned(
+                                                left: (_currentPath.last.x / mapWidth) * w - 24,
+                                                top: (_currentPath.last.y / mapHeight) * h - 48,
+                                                child: Transform(
+                                                  alignment: Alignment.bottomCenter,
+                                                  transform: Matrix4.identity()
+                                                    ..rotateZ(-animRot)
+                                                    ..rotateX(_is3DMode ? -_tiltAngle : 0),
+                                                  child: const Icon(
+                                                    Icons.location_on,
+                                                    color: Colors.black,
+                                                    size: 48,
+                                                  ),
+                                                ),
+                                              ),
+                                            // NEW: Animated User Marker
+                                            _buildUserMarker(w, h, mapWidth, mapHeight, animRot),
+                                            if (_showLabels && !_is3DMode)
+                                              ..._build2DLabelOverlays(mapWidth, mapHeight, w, h),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -1224,6 +1244,27 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       },
     );
   }
+}
+
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFD1D5DB).withOpacity(0.6) // Light gray dots
+      ..strokeWidth = 1.0;
+
+    const double spacing = 32.0;
+    
+    // Efficiently draw the grid
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), 0.8, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _ArrowPainter extends CustomPainter {
