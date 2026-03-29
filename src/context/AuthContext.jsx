@@ -1,7 +1,7 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebaseConfig';
 
 const AuthContext = createContext(null);
@@ -10,6 +10,19 @@ export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const updateUserData = async (newData) => {
+        if (!currentUser) return;
+        try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, newData);
+            setUserData(prev => ({ ...prev, ...newData }));
+            return { success: true };
+        } catch (error) {
+            console.error("Error updating user data:", error);
+            return { success: false, error };
+        }
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -37,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ currentUser, userData, loading }}>
+        <AuthContext.Provider value={{ currentUser, userData, loading, updateUserData }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,7 +1,12 @@
 // src/components/Header.jsx
 import { LuSearch } from 'react-icons/lu';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Header = ({ title, searchTerm, onSearchChange, searchDisabled = false, hideSearch = false, onBack }) => {
+  const navigate = useNavigate();
+  const { userData } = useAuth();
+  
   return (
     <div className="db-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -28,10 +33,17 @@ const Header = ({ title, searchTerm, onSearchChange, searchDisabled = false, hid
             />
           </div>
         )}
-        <div className="db-avatar-img">
+        <div 
+          className="db-avatar-img clickable" 
+          onClick={() => navigate('/profile')}
+          title="Go to Profile"
+        >
           <img
-            src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&auto=format&fit=crop"
+            src={userData?.profilePic || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&auto=format&fit=crop"}
             alt="Profile"
+            onError={(e) => {
+              e.target.src = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&auto=format&fit=crop";
+            }}
           />
         </div>
       </div>
