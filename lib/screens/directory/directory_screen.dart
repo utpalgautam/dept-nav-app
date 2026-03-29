@@ -431,27 +431,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   onTap: () =>
                       _handleNavigationTap(faculty.locationId, context),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.navigation, color: Colors.black, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'Navigate',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: const Icon(Icons.navigation, color: Colors.black, size: 18),
                   ),
                 ),
               ],
@@ -828,13 +813,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                         _buildFooterPill(roomLabel, isDark: true),
                         const SizedBox(width: 10),
                         _buildFooterPill(floorLabel, isDark: true),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: _buildNavigateButton(locationId, context),
-                          ),
-                        ),
+                        const Spacer(),
+                        _buildNavigateButton(locationId, context),
                       ],
                     ),
                   ],
@@ -884,30 +864,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     return GestureDetector(
       onTap: () => _handleNavigationTap(locationId, context),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                'Navigate',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            SizedBox(width: 8),
-            Icon(Icons.arrow_forward, size: 18, color: Colors.black),
-          ],
-        ),
+        child: const Icon(Icons.navigation, color: Colors.black, size: 18),
       ),
     );
   }

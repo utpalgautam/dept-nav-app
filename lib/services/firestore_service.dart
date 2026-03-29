@@ -110,8 +110,8 @@ class FirestoreService {
     await _buildings.doc(building.id).set(building.toFirestore());
   }
 
-  Future<BuildingModel?> getBuilding(String id) async {
-    final doc = await _buildings.doc(id).get();
+  Future<BuildingModel?> getBuilding(String id, {Source source = Source.serverAndCache}) async {
+    final doc = await _buildings.doc(id).get(GetOptions(source: source));
     if (doc.exists) {
       return BuildingModel.fromFirestore(
           doc.data() as Map<String, dynamic>, doc.id);
@@ -352,12 +352,12 @@ class FirestoreService {
     await _floors.doc(docId).set(floorData.toFirestore());
   }
 
-  Future<FloorModel?> getFloorMap(String buildingId, int floor) async {
+  Future<FloorModel?> getFloorMap(String buildingId, int floor, {Source source = Source.serverAndCache}) async {
     final querySnapshot = await _floors
         .where('buildingId', isEqualTo: buildingId)
         .where('floorNumber', isEqualTo: floor)
         .limit(1)
-        .get();
+        .get(GetOptions(source: source));
 
     if (querySnapshot.docs.isNotEmpty) {
       final doc = querySnapshot.docs.first;

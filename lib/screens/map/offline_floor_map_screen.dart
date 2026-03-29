@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../models/building_model.dart';
 import '../../models/floor_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/offline_storage_service.dart';
 
 class OfflineFloorMapScreen extends StatefulWidget {
   final BuildingModel building;
@@ -18,6 +19,7 @@ class OfflineFloorMapScreen extends StatefulWidget {
 
 class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  final OfflineStorageService _offlineStorageService = OfflineStorageService();
   int _selectedFloor = 0; // 0 for G, 1 for 1st floor, etc.
   FloorModel? _currentFloorData;
   bool _isLoading = true;
@@ -33,8 +35,16 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
       _isLoading = true;
     });
     try {
-      final floorData = await _firestoreService.getFloorMap(
+      // 1. Try to load from local storage first
+      FloorModel? floorData = await _offlineStorageService.getLocalFloorMap(
           widget.building.id, _selectedFloor);
+
+      // 2. If not found locally, fetch from Firestore
+      if (floorData == null) {
+        floorData = await _firestoreService.getFloorMap(
+            widget.building.id, _selectedFloor);
+      }
+
       setState(() {
         _currentFloorData = floorData;
         _isLoading = false;
