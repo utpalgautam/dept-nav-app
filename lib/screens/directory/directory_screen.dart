@@ -627,7 +627,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             return _buildDirectoryCard(
               title: hall.name,
               subtitle: hall.typeString,
-              department: 'Capacity: ${hall.capacity}',
+              department: '',
               contactLabel: '',
               contactValue: '',
               locationId: hall.locationId,
@@ -674,8 +674,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             final lab = items[index];
             return _buildDirectoryCard(
               title: lab.name,
-              subtitle: 'Capacity: ${lab.capacity}',
-              department: lab.department,
+              subtitle: lab.department,
+              department: '',
               contactLabel: 'Lab Incharge',
               contactValue: lab.incharge ?? '',
               locationId: lab.locationId,

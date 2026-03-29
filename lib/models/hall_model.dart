@@ -10,7 +10,6 @@ class HallModel {
   /// ID of the corresponding document in the `locations` collection.
   final String locationId;
 
-  final int capacity;
   final String? contactPerson;
 
   HallModel({
@@ -18,7 +17,6 @@ class HallModel {
     required this.name,
     required this.type,
     required this.locationId,
-    required this.capacity,
     this.contactPerson,
   });
 
@@ -28,7 +26,6 @@ class HallModel {
         name: data['name'] ?? '',
         type: _parseHallType(data['type']),
         locationId: data['locationId'] ?? '',
-        capacity: data['capacity'] ?? 0,
         contactPerson: data['contactPerson'] as String?,
       );
 
@@ -54,7 +51,6 @@ class HallModel {
         'name': name,
         'type': type.toString().split('.').last,
         'locationId': locationId,
-        'capacity': capacity,
         if (contactPerson != null) 'contactPerson': contactPerson,
       };
 }
