@@ -105,6 +105,12 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
     if (mounted) {
       setState(() => _isLoading = false);
+      // Initial voice announcement
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          context.read<NavigationProvider>().speak(_currentInstruction);
+        }
+      });
     }
   }
 
@@ -137,8 +143,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
           _currentInstruction = 'Route from $entryLabel to stairs not found.';
         }
       } else {
-        _currentInstruction =
-            'Follow route to stairs and change floor to Floor $targetFloor';
+        _currentInstruction = 'Follow the route to Stairs';
       }
     } else {
       _isNavigatingToStairs = false;
@@ -156,7 +161,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       if (_currentPath.isEmpty) {
         _currentInstruction = 'Route to $roomLabel not found.';
       } else {
-        _currentInstruction = 'Follow the path to reach $roomLabel';
+        _currentInstruction = 'Follow the route to $roomLabel';
       }
     }
 
@@ -440,11 +445,12 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       final double sy = (wp == 0 ? yp : yp / wp) + cy;
 
       // Stem tip is at (sx, sy). Box + stem sit above it.
-      const double boxH = 20.0;
+      const double boxH = 22.0;
       const double stemH = 5.0;
       const double dotR = 3.5;
 
       return Stack(
+        clipBehavior: Clip.none,
         children: [
           // Blue node dot at exact projected position
           Positioned(
@@ -453,55 +459,54 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
             child: Container(
               width: dotR * 2,
               height: dotR * 2,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2563EB),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB),
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 3,
+                  )
+                ],
               ),
             ),
           ),
-          // Comment box: Positioned at (sx, sy-boxH-stemH),
-          // FractionalTranslation(-0.5,0) centers it horizontally over sx.
+          // Callout Box
           Positioned(
             left: sx,
-            top: sy - boxH - stemH,
+            top: sy - stemH - 2, 
             child: FractionalTranslation(
-              translation: const Offset(-0.5, 0),
+              translation: const Offset(-0.5, -1.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CustomPaint(
-                    painter: _DashedRoundedBorderPainter(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.14),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        node.label,
-                        style: const TextStyle(
-                          fontSize: 7.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      ],
+                    ),
+                    child: Text(
+                      node.label,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  // Stem triangle pointing down to the dot
+                  // Triangle stem
                   CustomPaint(
-                    size: const Size(7, stemH),
+                    size: const Size(8, 5),
                     painter: _TrianglePainter(),
                   ),
                 ],
@@ -544,15 +549,24 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: _buildHeader(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16), // Aligns with the icon start in the header
+                            child: _buildNextStepBox(),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
                 // Toggle buttons: top-right, below the header
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + 160,
-                  right: 16,
+                  top: MediaQuery.of(context).padding.top + 140,
+                  right: 20,
                   child: _buildToggleButtons(),
                 ),
                 Positioned(
@@ -566,414 +580,230 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
     );
   }
 
-  Widget _buildToggleButtons() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 3D / 2D Toggle
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _is3DMode = !_is3DMode;
-              if (!_is3DMode) {
-                _rotationZ = 0.0;
-                _baseRotation = 0.0;
-              } else {
-                _rotationZ = 0.05;
-                _baseRotation = 0.05;
-              }
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: _is3DMode ? Colors.black : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(
-                color: _is3DMode ? Colors.black : Colors.black12,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _is3DMode ? Icons.view_in_ar_rounded : Icons.map_outlined,
-                  size: 14,
-                  color: _is3DMode ? Colors.white : Colors.black87,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _is3DMode ? '3D' : '2D',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _is3DMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Labels Toggle
-        GestureDetector(
-          onTap: () => setState(() => _showLabels = !_showLabels),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: _showLabels ? Colors.black : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(
-                color: _showLabels ? Colors.black : Colors.black12,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.label_rounded,
-                  size: 14,
-                  color: _showLabels ? Colors.white : Colors.black87,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Labels',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _showLabels ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        // PDR Mode Toggle
-        Consumer<NavigationProvider>(
-          builder: (context, navProvider, child) {
-            bool isPdr = navProvider.isPdrEnabled;
-            return GestureDetector(
-              onTap: () {
-                if (!isPdr) {
-                  // Enable PDR: Start at the beginning of the path
-                  if (_currentPath.isNotEmpty) {
-                    navProvider.setIndoorPdrEnabled(true, 
-                      startX: _currentPath.first.x, 
-                      startY: _currentPath.first.y,
-                      graph: _currentGraph,
-                    );
-                    navProvider.setIndoorPath(_currentPath);
-                  }
-                } else {
-                  navProvider.setIndoorPdrEnabled(false);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isPdr ? const Color(0xFF10B981) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isPdr ? const Color(0xFF10B981) : Colors.black12,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.directions_walk_rounded,
-                      size: 14,
-                      color: isPdr ? Colors.white : Colors.black87,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'PDR Mode',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isPdr ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        // Map Rotation Toggle
-        Consumer<NavigationProvider>(
-          builder: (context, navProvider, child) {
-            bool isRotating = navProvider.isMapRotationEnabled;
-            return GestureDetector(
-              onTap: () => navProvider.toggleMapRotation(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isRotating ? const Color(0xFF3B82F6) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isRotating ? const Color(0xFF3B82F6) : Colors.black12,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.explore_rounded,
-                      size: 14,
-                      color: isRotating ? Colors.white : Colors.black87,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Compass',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isRotating ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        // Voice Navigation Toggle
-        Consumer<NavigationProvider>(
-          builder: (context, navProvider, child) {
-            bool isVoice = navProvider.isVoiceEnabled;
-            return GestureDetector(
-              onTap: () => navProvider.toggleVoice(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isVoice ? const Color(0xFFF59E0B) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isVoice ? const Color(0xFFF59E0B) : Colors.black12,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isVoice
-                          ? Icons.volume_up_rounded
-                          : Icons.volume_off_rounded,
-                      size: 14,
-                      color: isVoice ? Colors.white : Colors.black87,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Voice',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isVoice ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        // Reset Position
-        GestureDetector(
-          onTap: () {
-            context.read<NavigationProvider>().resetIndoorPosition();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Position reset to start")),
-            );
-          },
-          child: _buildToggleButton(Icons.restart_alt_rounded, "Reset"),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildToggleButton(IconData icon, String label) {
+  Widget _buildNextStepBox() {
+    if (!_isNavigatingToStairs) return const SizedBox.shrink();
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        border: Border.all(color: Colors.black12, width: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.black87),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+          const Text(
+            "Next Change floor",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
           ),
+          const SizedBox(width: 6),
+          const Icon(Icons.swap_calls_rounded, color: Colors.white, size: 14),
         ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    String floorName =
-        _currentFloor == 0 ? 'Ground Floor' : 'Floor $_currentFloor';
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Icon(Icons.turn_left, color: Colors.white, size: 30),
+    return Consumer<NavigationProvider>(
+      builder: (context, navProv, child) {
+        String mainInstruction = navProv.isPdrEnabled 
+            ? navProv.currentIndoorInstruction 
+            : _currentInstruction;
+        
+        // Extract distance if possible for sub-instruction
+        String subInstruction = "Follow the blue path";
+        if (mainInstruction.contains("meters")) {
+           final match = RegExp(r'(\d+)\s+meters').firstMatch(mainInstruction);
+           if (match != null) {
+             subInstruction = "Straight ${match.group(1)}m";
+           }
+        } else if (_isNavigatingToStairs) {
+            subInstruction = ""; // Already shown in main instruction
+        } else if (_destination != null) {
+            // No need to repeat "Follow route to [Target]" in sub-text
+            subInstruction = ""; 
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              )
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$floorName ${widget.buildingName}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Consumer<NavigationProvider>(
-                  builder: (context, navProv, child) {
-                    return Text(
-                      _isDebugMode && _errorMessage != null
-                          ? _errorMessage!
-                          : (navProv.isPdrEnabled ? navProv.currentIndoorInstruction : _currentInstruction),
-                      style: TextStyle(
+                child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mainInstruction,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: _isDebugMode && _errorMessage != null
-                            ? Colors.red
-                            : Colors.black,
+                        color: Colors.black,
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 4),
-                Consumer<NavigationProvider>(
-                  builder: (context, navProvider, child) {
-                    bool isPdr = navProvider.isPdrEnabled;
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isPdr ? const Color(0xFF10B981).withOpacity(0.1) : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isPdr ? Icons.sensors : Icons.location_off,
-                            size: 10,
-                            color: isPdr ? const Color(0xFF10B981) : Colors.grey,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                     if (subInstruction.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subInstruction,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w400,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isPdr ? 'PDR Active' : 'Static Mode',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isPdr ? const Color(0xFF10B981) : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                        ),
+                     ],
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F4F7),
+                  shape: BoxShape.circle,
+                  boxShadow: navProv.isSpeaking
+                      ? [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.4),
+                            blurRadius: 15,
+                            spreadRadius: 5,
+                          ),
+                        ]
+                      : [],
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () {
+                    navProv.toggleVoice();
+                    navProv.speak(navProv.isVoiceEnabled ? "Voice navigation enabled" : "Voice navigation disabled");
+                  },
+                  icon: Icon(
+                    Icons.mic_rounded,
+                    color: navProv.isSpeaking ? Colors.blue : Colors.black,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ],
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: () {
-                Provider.of<NavigationProvider>(context, listen: false)
-                    .stopNavigation();
-                Navigator.pop(context);
+        );
+      },
+    );
+  }
+
+  Widget _buildToggleButtons() {
+    return Consumer<NavigationProvider>(
+      builder: (context, navProv, child) {
+        return Column(
+          children: [
+            _buildPremiumIconButton(
+              icon: _is3DMode ? Icons.view_in_ar_rounded : Icons.layers_outlined,
+              isActive: _is3DMode,
+              onTap: () {
+                setState(() {
+                  _is3DMode = !_is3DMode;
+                  if (!_is3DMode) {
+                    _rotationZ = 0.0;
+                    _baseRotation = 0.0;
+                  } else {
+                    _rotationZ = 0.05;
+                    _baseRotation = 0.05;
+                  }
+                });
+                navProv.speak(_is3DMode ? "3D perspective enabled" : "2D overview enabled");
               },
-              icon: const Icon(Icons.close, color: Colors.black, size: 20),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            _buildPremiumIconButton(
+              icon: _showLabels ? Icons.chat_bubble_rounded : Icons.speaker_notes_off_rounded,
+              isActive: _showLabels,
+              onTap: () {
+                setState(() => _showLabels = !_showLabels);
+                navProv.speak(_showLabels ? "Labels visible" : "Labels hidden");
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumIconButton(
+              icon: Icons.directions_walk_rounded,
+              isActive: navProv.isPdrEnabled,
+              onTap: () {
+                if (!navProv.isPdrEnabled) {
+                  if (_currentPath.isNotEmpty) {
+                    navProv.setIndoorPdrEnabled(true, 
+                      startX: _currentPath.first.x, 
+                      startY: _currentPath.first.y,
+                      graph: _currentGraph,
+                    );
+                    navProv.setIndoorPath(_currentPath);
+                  }
+                } else {
+                  navProv.setIndoorPdrEnabled(false);
+                }
+                navProv.speak(navProv.isPdrEnabled ? "P.D.R. mode enabled" : "P.D.R. mode disabled");
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPremiumIconButton({required IconData icon, required bool isActive, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: isActive ? Colors.black : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isActive ? null : Border.all(color: Colors.black12, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          color: isActive ? Colors.white : Colors.black,
+          size: 22,
+        ),
       ),
     );
   }
+
 
   Widget _buildMapView() {
     final processedSvg = _getProcessedSvg();
@@ -1159,35 +989,63 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                     return Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Accuracy Circle / Aura
+                        // Accuracy Aura
                         Container(
-                          width: 50,
-                          height: 50,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF3B82F6).withOpacity(0.15),
+                            color: const Color(0xFF3B82F6).withOpacity(0.12),
                           ),
                         ),
-                        // Inner Blue Dot
+                        // Direction Beam
+                        Transform.rotate(
+                          angle: animatedHeading + math.pi / 2,
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  const Color(0xFF3B82F6).withOpacity(0.4),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.2, 1.0],
+                                center: const Alignment(0, -0.2), // Shift gradient towards top
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Inner White Dot
                         Container(
                           width: 14,
                           height: 14,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.white,
-                            border: Border.all(color: const Color(0xFF3B82F6), width: 3),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                                color: Colors.blue.withOpacity(0.3),
+                                blurRadius: 10,
+                                spreadRadius: 2,
                               ),
                             ],
                           ),
+                          child: Center(
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF3B82F6),
+                              ),
+                            ),
+                          ),
                         ),
-                        // Direction Arrow
+                        // Direction Arrow Painter
                         Transform.rotate(
-                          angle: animatedHeading + math.pi / 2, // Rotate relative to map
+                          angle: animatedHeading + math.pi / 2,
                           child: CustomPaint(
                             size: const Size(20, 20),
                             painter: _ArrowPainter(),
@@ -1205,109 +1063,165 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
     );
   }
 
+  Widget _buildPdrStatusBox() {
+    return Consumer<NavigationProvider>(
+      builder: (context, navProv, child) {
+        if (!navProv.isPdrEnabled) return const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF2C2C2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.directions_walk_rounded, color: Colors.white, size: 12),
+                  const SizedBox(width: 6),
+                  const Text("PDR Enabled", 
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                ],
+              ),
+              const SizedBox(width: 24),
+              Row(
+                children: [
+                   const Icon(Icons.sensors_rounded, color: Colors.white, size: 12),
+                   const SizedBox(width: 6),
+                   const Text("Live Tracking", 
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildBottomPanel() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 30,
-            offset: Offset(0, -10),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Consumer<NavigationProvider>(
+      builder: (context, navProv, child) {
+        final distance = navProv.isPdrEnabled 
+            ? navProv.remainingIndoorDistance 
+            : _routeDistanceMeters.toDouble();
+        
+        // Estimation: 1.2m/s walking speed
+        final int timeEstimate = (distance / 1.2 / 60).ceil();
+        final now = DateTime.now();
+        final arrival = now.add(Duration(minutes: timeEstimate));
+        final arrivalTimeStr = "${arrival.hour.toString().padLeft(2, '0')}:${arrival.minute.toString().padLeft(2, '0')}";
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildPdrStatusBox(),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Consumer<NavigationProvider>(
-                    builder: (context, navProv, child) {
-                      final distance = navProv.isPdrEnabled 
-                          ? navProv.remainingIndoorDistance 
-                          : _routeDistanceMeters.toDouble();
-                      return Text(
-                        '${distance.toStringAsFixed(0)}m ahead',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                   // Drag handle
+                  Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Exit Button
+                      GestureDetector(
+                        onTap: () {
+                          navProv.stopNavigation();
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
                         ),
-                      );
-                    },
+                      ),
+
+                      // Center Metrics
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                               children: [
+                                Text(
+                                  "$timeEstimate min",
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.directions_walk_rounded, 
+                                  color: Colors.black87, size: 24),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "${distance.toStringAsFixed(0)} m • $arrivalTimeStr",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black.withOpacity(0.5),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Confirm Button
+                      GestureDetector(
+                        onTap: _onReachedWaypoint,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text(
-                    'Flow Blue line',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  Text(
-                    _isNavigatingToStairs
-                        ? 'Floor Change Needed'
-                        : 'Target nearby',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _onReachedWaypoint,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text('Confirm Reach',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Provider.of<NavigationProvider>(context, listen: false)
-                        .stopNavigation();
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text('Exit Navigation',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
