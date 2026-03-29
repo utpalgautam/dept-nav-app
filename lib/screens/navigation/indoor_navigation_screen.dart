@@ -1253,12 +1253,12 @@ class _DotGridPainter extends CustomPainter {
       ..color = const Color(0xFFD1D5DB).withOpacity(0.6) // Light gray dots
       ..strokeWidth = 1.0;
 
-    const double spacing = 32.0;
+    const double spacing = 15.0;
     
     // Efficiently draw the grid
     for (double x = 0; x < size.width; x += spacing) {
       for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 0.8, paint);
+        canvas.drawCircle(Offset(x, y), 0.6, paint);
       }
     }
   }
