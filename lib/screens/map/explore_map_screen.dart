@@ -293,9 +293,9 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
               zoom: 17.0,
               tilt: 0,
             ),
-            styleString: MapStyle.darkMatter,
+            styleString: MapStyle.voyager,
             myLocationEnabled: false, // Using custom layered blue dot
-            myLocationRenderMode: MyLocationRenderMode.compass,
+            myLocationRenderMode: MyLocationRenderMode.normal,
             myLocationTrackingMode: MyLocationTrackingMode.none,
             compassEnabled: false, // We use our custom compass button
             attributionButtonPosition: AttributionButtonPosition.bottomLeft,
@@ -375,9 +375,9 @@ class _MapFloatingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF1C2130),
+      color: Colors.white,
       shape: const CircleBorder(),
-      elevation: 6,
+      elevation: 4,
       shadowColor: Colors.black54,
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -385,7 +385,7 @@ class _MapFloatingButton extends StatelessWidget {
         child: SizedBox(
           width: 48,
           height: 48,
-          child: Icon(icon, color: Colors.white, size: 22),
+          child: Icon(icon, color: Colors.black87, size: 22),
         ),
       ),
     );
@@ -414,9 +414,9 @@ class _CompassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF1C2130),
+      color: Colors.white,
       shape: const CircleBorder(),
-      elevation: 6,
+      elevation: 4,
       shadowColor: Colors.black54,
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -427,7 +427,7 @@ class _CompassButton extends StatelessWidget {
           child: Center(
             child: Transform.rotate(
               angle: -bearing * 3.14159265 / 180,
-              child: const Icon(Icons.navigation, color: Colors.redAccent, size: 22),
+              child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 22),
             ),
           ),
         ),
@@ -444,9 +444,9 @@ class _RecenterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF1C2130),
+      color: Colors.white,
       borderRadius: BorderRadius.circular(28),
-      elevation: 6,
+      elevation: 4,
       shadowColor: Colors.black54,
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
@@ -458,13 +458,13 @@ class _RecenterButton extends StatelessWidget {
             children: [
               Transform.rotate(
                 angle: -0.785, // 45° tilt = navigation arrow
-                child: const Icon(Icons.navigation, color: Colors.white, size: 18),
+                child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 18),
               ),
               const SizedBox(width: 8),
               const Text(
                 'Re-centre',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.black87,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                   letterSpacing: 0.2,

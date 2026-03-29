@@ -531,6 +531,9 @@ class NavigationProvider extends ChangeNotifier {
       BuildingModel? targetBuilding,
       EntryPoint? entryPoint,
   }) async {
+    // 0. Robust Reset: Ensure any previous navigation or tracking is killed
+    stopNavigation();
+    
     _destination = destination;
     _targetBuilding = targetBuilding;
     _targetEntryPoint = entryPoint;
@@ -951,21 +954,27 @@ class NavigationProvider extends ChangeNotifier {
   void stopNavigation() {
     _isNavigating = false;
     _isIndoor = false;
+    _isLoadingRoute = false;
     _destination = null;
     _targetEntryPoint = null;
     _targetBuilding = null;
     _currentRoute = null;
     _currentInstruction = null;
+    _currentInstructionIndex = 0;
     _distanceToDestination = null;
     _distanceToNextStep = null;
     _snappedPosition = null;
+    _remainingRouteCoordinates = [];
     _nextSegmentCoordinates = [];
     _isRerouting = false;
     _isPdrEnabled = false;
+    _routeError = null;
     
     _positionStreamSubscription?.cancel();
     _positionStreamSubscription = null;
     _stopPdrSensors();
+    
+    _voiceService.resetLastSpoken();
     
     notifyListeners();
   }
