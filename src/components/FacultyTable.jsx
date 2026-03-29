@@ -24,9 +24,9 @@ const FacultyTable = ({ facultyData, buildings = [], onEdit, onDelete }) => {
       <div className="fac-table-wrapper">
         {/* Table Header block */}
         <div className="fac-table-header">
-          <div>Faculty Member Name</div>
-          <div>Department</div>
-          <div>Cabin</div>
+          <div style={{ paddingLeft: '2.5rem' }}>Faculty Member Name</div>
+          <div style={{ marginLeft: '-1rem' }}>Department</div>
+          <div style={{ paddingLeft: '5rem' }}>Cabin</div>
           <div style={{ textAlign: 'center' }}>Action</div>
         </div>
 

@@ -36,7 +36,7 @@ const Dashboard = () => {
 
         const allBuildings = buildingsSnap.docs.map(doc => doc.data().name);
         const searchResults = await getSearchesPerBuilding(timeframe);
-        
+
         // Merge: ensure all buildings from database are shown
         const mergedBuildingData = allBuildings.map(name => {
           const match = searchResults.find(r => r.name === name);
@@ -79,7 +79,7 @@ const Dashboard = () => {
 
   return (
     <div className="db-page">
-      <Header title="Dashboard" searchDisabled={true} />
+      <Header title="Dashboard" searchDisabled={true} hideSearch={true} />
 
       {/* Stats Row */}
       <div className="db-stats-row">
@@ -119,25 +119,25 @@ const Dashboard = () => {
         {/* Row 1, Column 1 */}
         <div className="db-action-card" onClick={() => navigate('/faculties', { state: { openForm: true } })}>
           <div className="db-action-icon-wrapper"><div className="db-action-icon-circle">{quickActions[0].icon}</div></div>
-          <div className="db-action-text"><span className="db-action-sub">Nearby</span><span className="db-action-label">Add Faculty</span></div>
+          <div className="db-action-text"><span className="db-action-sub">Manage</span><span className="db-action-label">Add Faculty</span></div>
         </div>
         {/* Row 1, Column 2 */}
         <div className="db-action-card" onClick={() => navigate('/buildings', { state: { openForm: true } })}>
           <div className="db-action-icon-wrapper"><div className="db-action-icon-circle">{quickActions[1].icon}</div></div>
-          <div className="db-action-text"><span className="db-action-sub">Nearby</span><span className="db-action-label">Add Building</span></div>
+          <div className="db-action-text"><span className="db-action-sub">Manage</span><span className="db-action-label">Add Building</span></div>
         </div>
         {/* Row 1, Column 3 */}
         <div className="db-action-card" onClick={() => navigate('/halls-labs', { state: { openForm: true } })}>
           <div className="db-action-icon-wrapper"><div className="db-action-icon-circle">{quickActions[2].icon}</div></div>
-          <div className="db-action-text"><span className="db-action-sub">Nearby</span><span className="db-action-label">Add Halls/Labs</span></div>
+          <div className="db-action-text"><span className="db-action-sub">Manage</span><span className="db-action-label">Add Halls/Labs</span></div>
         </div>
 
         {/* Vertical Spanning Block - Column 4, now Searches by Building */}
         <div className="db-placeholder-block grid-span-2-row">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span className="db-block-title" style={{ margin: 0 }}>Searches by Building</span>
-            <select 
-              value={timeframe} 
+            <select
+              value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
               className="db-filter-select"
               style={{
@@ -185,28 +185,28 @@ const Dashboard = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={searchesPerDay} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#888' }} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 9, fill: '#888' }}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#888' }} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 9, fill: '#888' }}
                 />
                 <Tooltip
                   contentStyle={{ background: '#1c1c1e', border: '1px solid #444', borderRadius: '8px', color: '#fff', fontSize: '10px' }}
                   itemStyle={{ color: '#818cf8' }}
                 />
-                <Line 
-                    type="monotone" 
-                    dataKey="searches" 
-                    stroke="#818cf8" 
-                    strokeWidth={3} 
-                    dot={{ r: 3, fill: '#818cf8', strokeWidth: 0 }} 
-                    activeDot={{ r: 5, strokeWidth: 0 }} 
+                <Line
+                  type="monotone"
+                  dataKey="searches"
+                  stroke="#818cf8"
+                  strokeWidth={3}
+                  dot={{ r: 3, fill: '#818cf8', strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               </LineChart>
             </ResponsiveContainer>

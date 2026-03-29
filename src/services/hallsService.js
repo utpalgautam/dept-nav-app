@@ -121,6 +121,7 @@ export async function addHall(itemData) {
             locationId: locationRef.id,
             capacity: parseInt(itemData.capacity) || 0,
             contactPerson: itemData.contactPerson || null,
+            roomNumber: itemData.roomNumber || null,
             building: itemData.building, // Building ID (e.g. B1)
             floor: itemData.floor,
             status: itemData.status,

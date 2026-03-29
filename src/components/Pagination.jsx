@@ -17,10 +17,28 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => 
 
   const renderPageNumbers = () => {
     const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
+    let startPage, endPage;
+
+    if (totalPages <= 3) {
+      startPage = 1;
+      endPage = totalPages;
+    } else {
+      if (currentPage === 1) {
+        startPage = 1;
+        endPage = 3;
+      } else if (currentPage === totalPages) {
+        startPage = totalPages - 2;
+        endPage = totalPages;
+      } else {
+        startPage = currentPage - 1;
+        endPage = currentPage + 1;
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
       pages.push(
-        <div 
-          key={i} 
+        <div
+          key={i}
           className={`page-num ${currentPage === i ? 'active' : ''}`}
           onClick={() => onPageChange(i)}
         >
@@ -33,25 +51,25 @@ const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => 
 
   return (
     <div className="user-pagination">
-      <span className="pagination-info">Showing {startIdx} to {endIdx} of {totalItems}</span>
+      <span className="pagination-info">
+        Showing {startIdx} to {endIdx} of {totalItems}
+      </span>
       <div className="user-pages">
-        <span 
-          className="page-nav"
-          style={{ cursor: currentPage > 1 ? 'pointer' : 'default', opacity: currentPage > 1 ? 1 : 0.4 }}
+        <div 
+          className={`page-nav ${currentPage === 1 ? 'disabled' : ''}`}
           onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
         >
           &lt;
-        </span>
+        </div>
         
         {renderPageNumbers()}
 
-        <span 
-          className="page-nav"
-          style={{ cursor: currentPage < totalPages ? 'pointer' : 'default', opacity: currentPage < totalPages ? 1 : 0.4 }}
+        <div 
+          className={`page-nav ${currentPage === totalPages ? 'disabled' : ''}`}
           onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
         >
           &gt;
-        </span>
+        </div>
       </div>
     </div>
   );

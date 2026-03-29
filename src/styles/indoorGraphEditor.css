@@ -241,7 +241,7 @@
 }
 
 .ige-pill.active {
-  background: #3b82f6;
+  background: #111;
   color: #fff;
 }
 
@@ -357,13 +357,14 @@
 }
 
 .ige-form-btn.primary {
-  background: #3b82f6;
+  background: #111;
   color: #fff;
-  border-color: #3b82f6;
+  border-color: #111;
 }
 
 .ige-form-btn.primary:hover:not(:disabled) {
-  background: #2563eb;
+  background: #000;
+  border-color: #000;
 }
 
 .ige-form-btn.primary:disabled {
@@ -373,12 +374,14 @@
 
 .ige-form-btn.danger {
   background: #fff;
-  color: #dc2626;
-  border-color: #fecaca;
+  color: #111;
+  border-color: #111;
 }
 
 .ige-form-btn.danger:hover {
-  background: #fee2e2;
+  background: #f3f4f6;
+  border-color: #000;
+  color: #000;
 }
 
 /* ─── Selector pills (page level) ─── */

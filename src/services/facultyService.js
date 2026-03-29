@@ -124,6 +124,7 @@ export async function addFaculty(facultyData) {
             name: facultyData.name,
             email: facultyData.email || '',
             role: facultyData.role || '',
+            department: facultyData.department || '',
             cabin: facultyData.cabin || '',
             building: facultyData.building || '', // This is now the building ID
             floor: facultyData.floor || '',

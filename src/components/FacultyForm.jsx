@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { fetchFloors } from '../services/floorService';
 
 const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         role: '',
+        department: '',
         cabin: '',
         building: '',
         floor: '',
@@ -14,6 +16,8 @@ const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [availableFloors, setAvailableFloors] = useState([]);
+    const [isFloorsLoading, setIsFloorsLoading] = useState(false);
     const fileInputRef = useRef(null);
 
     const isEdit = !!faculty;
@@ -24,6 +28,7 @@ const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
                 name: faculty.name || '',
                 email: faculty.email || '',
                 role: faculty.role || '',
+                department: faculty.department || '',
                 cabin: faculty.cabin || '',
                 building: faculty.building || '',
                 floor: faculty.floor || '',
@@ -31,15 +36,48 @@ const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
                 imageFile: null,
                 _localPreview: null
             });
+            // Load floors immediately for edit mode
+            if (faculty.building) {
+                loadFloors(faculty.building);
+            }
         }
     }, [faculty]);
 
+    const loadFloors = async (buildingId) => {
+        if (!buildingId) {
+            setAvailableFloors([]);
+            return;
+        }
+        setIsFloorsLoading(true);
+        try {
+            const floors = await fetchFloors(buildingId);
+            // Sort floors numerically
+            const sortedFloors = floors.sort((a, b) => a.floorNumber - b.floorNumber);
+            setAvailableFloors(sortedFloors);
+        } catch (err) {
+            console.error('Error loading floors:', err);
+            setError('Failed to load floors for the selected building.');
+        } finally {
+            setIsFloorsLoading(false);
+        }
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        
+        if (name === 'building') {
+            setFormData(prev => ({
+                ...prev,
+                building: value,
+                floor: '' // Reset floor when building changes
+            }));
+            loadFloors(value);
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
         setError('');
     };
 
@@ -150,16 +188,37 @@ const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
                         />
                     </div>
 
-                    <div className="fac-form-group">
-                        <label className="fac-label">Designation</label>
-                        <input
-                            type="text"
-                            name="role"
-                            className="fac-input"
-                            value={formData.role}
-                            onChange={handleChange}
-                            placeholder="e.g. Assistant Professor"
-                        />
+                    <div className="fac-form-row">
+                        <div className="fac-form-group">
+                            <label className="fac-label">Designation</label>
+                            <input
+                                type="text"
+                                name="role"
+                                className="fac-input"
+                                value={formData.role}
+                                onChange={handleChange}
+                                placeholder="Assistant Professor"
+                            />
+                        </div>
+                        <div className="fac-form-group">
+                            <label className="fac-label">Department</label>
+                            <select
+                                name="department"
+                                className="fac-select"
+                                value={formData.department}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="" disabled>Select Department</option>
+                                <option value="CSE">Computer Science</option>
+                                <option value="ECE">Electronics & Communication</option>
+                                <option value="ME">Mechanical Engineering</option>
+                                <option value="CE">Civil Engineering</option>
+                                <option value="EEE">Electrical & Electronics</option>
+                                <option value="ARCH">Architecture</option>
+                                <option value="IT">Information Technology</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="fac-form-row">
@@ -185,14 +244,17 @@ const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
                                 className="fac-select"
                                 value={formData.floor}
                                 onChange={handleChange}
+                                disabled={!formData.building || isFloorsLoading}
+                                required
                             >
-                                <option value="" disabled>Select Floor</option>
-                                <option value="0">Ground Floor</option>
-                                <option value="1">1st Floor</option>
-                                <option value="2">2nd Floor</option>
-                                <option value="3">3rd Floor</option>
-                                <option value="4">4th Floor</option>
-                                <option value="5">5th Floor</option>
+                                <option value="" disabled>
+                                    {!formData.building ? 'Select building first' : isFloorsLoading ? 'Loading floors...' : 'Select Floor'}
+                                </option>
+                                {availableFloors.map(f => (
+                                    <option key={f.id} value={f.floorNumber}>
+                                        {f.name || `Floor ${f.floorNumber}`}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>

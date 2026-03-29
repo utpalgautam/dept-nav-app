@@ -13,6 +13,7 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
         capacity: '',
         status: 'ACTIVE',
         contactPerson: '',
+        roomNumber: '',
         department: '',
         incharge: '',
         inchargeEmail: '',
@@ -36,6 +37,7 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                 capacity: item.capacity || '',
                 status: item.status || 'ACTIVE',
                 contactPerson: item.contactPerson || '',
+                roomNumber: item.roomNumber || '',
                 department: item.department || '',
                 incharge: item.incharge || '',
                 inchargeEmail: item.inchargeEmail || '',
@@ -180,31 +182,57 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
             </div>
 
             {isLab === false && (
-                <div className="hl-form-group">
-                    <label>Contact Person</label>
-                    <input
-                        type="text"
-                        name="contactPerson"
-                        className="hl-input-pill hl-input-full"
-                        value={formData.contactPerson}
-                        onChange={handleChange}
-                        placeholder="Dr. Ramesh Kumar"
-                    />
-                </div>
-            )}
-
-            {isLab && (
-                <>
+                <div className="hl-form-grid">
                     <div className="hl-form-group">
-                        <label>Department</label>
+                        <label>Contact Person</label>
                         <input
                             type="text"
-                            name="department"
-                            className="hl-input-pill hl-input-full"
-                            value={formData.department}
+                            name="contactPerson"
+                            className="hl-input-pill"
+                            value={formData.contactPerson}
                             onChange={handleChange}
-                            placeholder="Computer Science"
+                            placeholder="Dr. Ramesh Kumar"
                         />
+                    </div>
+                    <div className="hl-form-group">
+                        <label>Room Number</label>
+                        <input
+                            type="text"
+                            name="roomNumber"
+                            className="hl-input-pill"
+                            value={formData.roomNumber}
+                            onChange={handleChange}
+                            placeholder="Room 203"
+                        />
+                    </div>
+                </div>
+            )}
+ 
+            {isLab && (
+                <>
+                    <div className="hl-form-grid">
+                        <div className="hl-form-group">
+                            <label>Department</label>
+                            <input
+                                type="text"
+                                name="department"
+                                className="hl-input-pill"
+                                value={formData.department}
+                                onChange={handleChange}
+                                placeholder="Computer Science"
+                            />
+                        </div>
+                        <div className="hl-form-group">
+                            <label>Room Number</label>
+                            <input
+                                type="text"
+                                name="roomNumber"
+                                className="hl-input-pill"
+                                value={formData.roomNumber}
+                                onChange={handleChange}
+                                placeholder="L201"
+                            />
+                        </div>
                     </div>
                     <div className="hl-form-grid">
                         <div className="hl-form-group">

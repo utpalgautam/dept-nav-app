@@ -151,11 +151,11 @@ const UserManagementPage = () => {
         <table className="user-table">
           <thead>
             <tr>
-              <th>User Name</th>
-              <th>Branch</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th style={{ textAlign: 'left', paddingLeft: '4.5rem' }}>User Name</th>
+              <th style={{ textAlign: 'center' }}>Branch</th>
+              <th style={{ textAlign: 'center' }}>Type</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'right', paddingRight: '6.5rem' }}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -167,53 +167,53 @@ const UserManagementPage = () => {
               filteredUsers
                 .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                 .map(user => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="user-name-cell">
-                      <div className="user-avatar-dark">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                          <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
+                  <tr key={user.id}>
+                    <td style={{ textAlign: 'left' }}>
+                      <div className="user-name-cell">
+                        <div className="user-avatar-dark">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="user-name-text">{user.name || 'Unknown User'}</div>
+                          <div className="user-email-text">{user.email}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="user-name-text">{user.name || 'Unknown User'}</div>
-                        <div className="user-email-text">{user.email}</div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="user-branch-text">{user.department || 'N/A'}</span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="user-pill user-pill-blue">{user.role || 'Student'}</span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className={`user-pill ${(user.status || 'inactive') === 'active' ? 'user-pill-green' : 'user-pill-red'}`}>
+                        {(user.status || 'Inactive').charAt(0).toUpperCase() + (user.status || 'inactive').slice(1)}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="user-action-group" style={{ justifyContent: 'flex-end' }}>
+                        <button className="user-pill user-pill-purple" onClick={() => handleResetPasswordClick(user)}>
+                          Reset
+                        </button>
+                        <button className="user-pill user-pill-yellow" onClick={() => handleEditUserClick(user)}>
+                          Modify
+                        </button>
+                        <button className="user-icon-btn user-btn-black" onClick={() => handleDeleteUserClick(user)}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="user-branch-text">{user.department || 'N/A'}</span>
-                  </td>
-                  <td>
-                    <span className="user-pill user-pill-blue">{user.role || 'Student'}</span>
-                  </td>
-                  <td>
-                    <span className={`user-pill ${(user.status || 'inactive') === 'active' ? 'user-pill-green' : 'user-pill-red'}`}>
-                      {(user.status || 'Inactive').charAt(0).toUpperCase() + (user.status || 'inactive').slice(1)}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="user-action-group">
-                      <button className="user-pill user-pill-purple" onClick={() => handleResetPasswordClick(user)}>
-                        Reset
-                      </button>
-                      <button className="user-pill user-pill-yellow" onClick={() => handleEditUserClick(user)}>
-                        Modify
-                      </button>
-                      <button className="user-icon-btn user-btn-black" onClick={() => handleDeleteUserClick(user)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                ))
             )}
           </tbody>
         </table>
       </div>
 
-      <Pagination 
+      <Pagination
         currentPage={currentPage}
         totalItems={filteredUsers.length}
         itemsPerPage={itemsPerPage}

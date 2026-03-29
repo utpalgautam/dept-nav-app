@@ -137,7 +137,7 @@ const FacultyManagement = () => {
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-          <Pagination 
+          <Pagination
             currentPage={currentPage}
             totalItems={processedData.length}
             itemsPerPage={itemsPerPage}

@@ -100,6 +100,9 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
             const data = await fetchFloors(building.id);
             data.sort((a, b) => a.floorNumber - b.floorNumber);
             setFloors(data);
+            if (data.length > 0) {
+                setPreviewFloor(data[0]);
+            }
         } catch (err) {
             setError('Failed to load floors');
         } finally {
@@ -210,7 +213,10 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
             {/* ── Page Header ─────────────────────────────────────── */}
             <div className="bd-header-container">
                 <button className="bd-back-btn" onClick={onBack}>
-                    <FaArrowLeft size={14} />
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5"></path>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
                 </button>
                 <Header title={building.name} />
             </div>
@@ -245,7 +251,7 @@ const BuildingDetails = ({ building, onBack, onEdit }) => {
                         <select
                             className="bd-floor-select"
                             onChange={handleSelectFloor}
-                            defaultValue=""
+                            value={previewFloor?.id || ''}
                         >
                             <option value="" disabled>Select Floor Map</option>
                             {floors.map((f) => (

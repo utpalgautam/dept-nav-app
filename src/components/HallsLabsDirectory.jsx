@@ -31,10 +31,11 @@ const HallsLabsDirectory = ({ processedData, onAdd, onEdit, onDelete, sortAsc, o
     );
   };
 
-  const getLocationString = (bldg, floor) => {
+  const getLocationString = (bldg, floor, roomNumber) => {
     const parts = [];
     if (bldg) parts.push(`${bldg} Building`);
     if (floor) parts.push(`Floor ${floor}`);
+    if (roomNumber) parts.push(`${roomNumber}`);
     return parts.join(', ') || 'Location Pending';
   };
 
@@ -51,9 +52,9 @@ const HallsLabsDirectory = ({ processedData, onAdd, onEdit, onDelete, sortAsc, o
 
       <div className="hl-table-container">
         <div className="hl-table-header">
-          <span>Room Name</span>
-          <span>Location</span>
-          <span>Type</span>
+          <span style={{ paddingLeft: '4rem' }}>Room Name</span>
+          <span style={{ textAlign: 'center' }}>Location</span>
+          <span style={{ paddingLeft: '1.5rem' }}>Type</span>
           <span style={{ textAlign: 'center' }}>Action</span>
         </div>
 
@@ -80,8 +81,8 @@ const HallsLabsDirectory = ({ processedData, onAdd, onEdit, onDelete, sortAsc, o
                 </div>
               </div>
 
-              <div className="hl-table-cell">
-                {getLocationString(item.building, item.floor)}
+              <div className="hl-table-cell" style={{ justifyContent: 'center' }}>
+                {getLocationString(item.building, item.floor, item.roomNumber)}
               </div>
 
               <div className="hl-table-cell">

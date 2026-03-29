@@ -1,6 +1,6 @@
 // src/components/Sidebar.jsx
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LuLayoutDashboard,
   LuBuilding2,
@@ -14,8 +14,20 @@ import { logoutAdmin } from '../services/authService';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const getLogoLetter = () => {
+    const path = location.pathname;
+    if (path === '/') return 'D';
+    if (path.startsWith('/faculties')) return 'F';
+    if (path.startsWith('/buildings')) return 'B';
+    if (path.startsWith('/halls-labs')) return 'H';
+    if (path.startsWith('/users')) return 'U';
+    if (path.startsWith('/routing')) return 'R';
+    return 'D';
+  };
 
   const handleLogoutConfirm = async () => {
     setLoggingOut(true);
@@ -33,7 +45,7 @@ const Sidebar = () => {
     <>
       <div className="sidebar">
         <div className="logo">
-          <div className="badge">D.</div>
+          <div className="badge">{getLogoLetter()}.</div>
         </div>
 
         <div className="nav-section">

@@ -116,6 +116,7 @@ export async function addLab(itemData) {
         const finalItemData = {
             name: itemData.name,
             department: itemData.department || '',
+            roomNumber: itemData.roomNumber || null,
             locationId: locationRef.id,
             capacity: parseInt(itemData.capacity) || 0,
             incharge: itemData.incharge || null,
