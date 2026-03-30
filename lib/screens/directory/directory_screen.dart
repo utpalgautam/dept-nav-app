@@ -627,7 +627,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             return _buildDirectoryCard(
               title: hall.name,
               subtitle: hall.typeString,
-              department: '',
+              department: 'CSE', // Hardcoded for matching the design if missing in model
               contactLabel: '',
               contactValue: '',
               locationId: hall.locationId,
@@ -674,10 +674,10 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             final lab = items[index];
             return _buildDirectoryCard(
               title: lab.name,
-              subtitle: lab.department,
-              department: '',
-              contactLabel: 'Lab Incharge',
-              contactValue: lab.incharge ?? '',
+              subtitle: lab.incharge != null ? 'Lab Incharge : ${lab.incharge}' : '',
+              department: lab.department,
+              contactLabel: '', // Merged into subtitle for image matching
+              contactValue: '',
               locationId: lab.locationId,
               fallbackIcon: Icons.science,
             );
@@ -697,7 +697,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     String? photoUrl,
     IconData fallbackIcon = Icons.person,
   }) {
-    // Determine image placeholders if needed, though we rely on photoUrl/fallback
     return FutureBuilder<LocationModel?>(
       future: _getLocationFuture(locationId),
       builder: (context, snapshot) {
@@ -707,113 +706,123 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             location?.floor != null ? 'Floor ${location!.floor}' : 'TBA';
 
         return Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: const Color(0xFF1B1B1C), // very dark grey, almost black
-            borderRadius: BorderRadius.circular(28),
+            color: const Color(0xFF1B1B1C), // very dark grey
+            borderRadius: BorderRadius.circular(24),
           ),
           child: Stack(
             children: [
-              // Massive subtle dark circle top-right
+              // Subtle circle top-right
               Positioned(
-                top: -80,
-                right: -60,
+                top: -60,
+                right: -40,
                 child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: const BoxDecoration(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Color(0xFF222223), // slightly lighter dark grey
+                    color: Colors.white.withOpacity(0.03),
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Profile Image (Rounded Square with white border)
+                        // Image (Rounded Square with white border)
                         Container(
-                          width: MediaQuery.of(context).size.width * 0.16,
-                          height: MediaQuery.of(context).size.width * 0.16,
+                          width: 72,
+                          height: 72,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white, width: 2.5),
                             color: const Color(0xFF333333),
-                            image: photoUrl != null && photoUrl.isNotEmpty
+                            image: (photoUrl != null && photoUrl.isNotEmpty)
                                 ? DecorationImage(
                                     image: NetworkImage(photoUrl),
                                     fit: BoxFit.cover,
                                   )
                                 : null,
                           ),
-                          child: photoUrl == null || photoUrl.isEmpty
+                          child: (photoUrl == null || photoUrl.isEmpty)
                               ? Icon(fallbackIcon,
-                                  color: const Color(0xFFCCCCCC), size: 30)
+                                  color: Colors.white30, size: 36)
                               : null,
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 20),
                         // Text info
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.2,
                                 ),
-                                const SizedBox(height: 8),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              if (subtitle.isNotEmpty)
                                 Text(
                                   subtitle,
                                   style: const TextStyle(
-                                    color: Color(0xFF909090),
-                                    fontSize: 14,
-                                    height: 1.3,
+                                    color: Color(0xFF888888),
+                                    fontSize: 13,
+                                    height: 1.4,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                if (department.isNotEmpty)
-                                  Text(
-                                    department,
-                                    style: const TextStyle(
-                                      color: Color(0xFF909090),
-                                      fontSize: 14,
-                                      height: 1.3,
-                                    ),
+                              if (department.isNotEmpty)
+                                Text(
+                                  department,
+                                  style: const TextStyle(
+                                    color: Color(0xFF888888),
+                                    fontSize: 13,
+                                    height: 1.4,
                                   ),
-                                if (contactValue.isNotEmpty)
-                                  Text(
-                                    '$contactLabel : $contactValue',
-                                    style: const TextStyle(
-                                      color: Color(0xFF909090),
-                                      fontSize: 14,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                              ],
-                            ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    // Footer Pills
+                    const SizedBox(height: 24),
+                    // Footer Row
                     Row(
                       children: [
-                        _buildFooterPill(roomLabel, isDark: true),
+                        _buildFooterPill(roomLabel),
                         const SizedBox(width: 10),
-                        _buildFooterPill(floorLabel, isDark: true),
-                        const Spacer(),
+                        _buildFooterPill(floorLabel),
+                        const SizedBox(width: 10),
+                        if (location != null && location.buildingId != null)
+                          FutureBuilder<dynamic>(
+                            future: _firestoreService
+                                .getBuilding(location.buildingId!),
+                            builder: (context, bSnapshot) {
+                              final buildingName = bSnapshot.hasData
+                                  ? bSnapshot.data!.name
+                                  : '...';
+                              return Expanded(
+                                child: _buildFooterPill(buildingName),
+                              );
+                            },
+                          ),
+                        if (location == null || location.buildingId == null)
+                          const Spacer(),
+                        const SizedBox(width: 12),
                         _buildNavigateButton(locationId, context),
                       ],
                     ),
@@ -827,35 +836,22 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
-  Widget _buildFooterPill(String text,
-      {required bool isDark, bool hasArrow = false}) {
+  Widget _buildFooterPill(String text) {
     return Container(
-      padding: EdgeInsets.symmetric(
-          horizontal: hasArrow ? 18 : 16, vertical: hasArrow ? 12 : 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF333436)
-            : const Color(0xFFDCDCDC), // dark pill vs light pill
-        borderRadius: BorderRadius.circular(hasArrow ? 24 : 18),
+        color: const Color(0xFF333436),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black,
-              fontSize: 14,
-              fontWeight: isDark ? FontWeight.w500 : FontWeight.w600,
-            ),
-          ),
-          if (hasArrow) ...[
-            const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward, size: 18, color: Colors.black),
-          ],
-        ],
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -864,12 +860,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     return GestureDetector(
       onTap: () => _handleNavigationTap(locationId, context),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: const Icon(Icons.navigation, color: Colors.black, size: 18),
+        child: const Icon(Icons.navigation, color: Colors.black, size: 20),
       ),
     );
   }
