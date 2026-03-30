@@ -89,7 +89,7 @@ class _DirectoryDetailsScreenState extends State<DirectoryDetailsScreen> {
   String get _department {
     if (widget.model is FacultyModel) return (widget.model as FacultyModel).department;
     if (widget.model is LabModel) return (widget.model as LabModel).department;
-    if (widget.model is HallModel) return 'General';
+    if (widget.model is HallModel) return (widget.model as HallModel).department;
     return 'N/A';
   }
 
@@ -309,8 +309,18 @@ class _DirectoryDetailsScreenState extends State<DirectoryDetailsScreen> {
                   // --- Info Capsules ---
                   _buildInfoCapsule('Department', _department, capsulePadding),
                   SizedBox(height: availableHeight < 650 ? 8 : 12),
-                  _buildInfoCapsule('Email', _email, capsulePadding),
-                  SizedBox(height: availableHeight < 650 ? 8 : 12),
+                  
+                  // Conditional Lab Incharge
+                  if (widget.model is LabModel) ...[
+                    _buildInfoCapsule('Lab Incharge', (widget.model as LabModel).incharge ?? 'N/A', capsulePadding),
+                    SizedBox(height: availableHeight < 650 ? 8 : 12),
+                  ],
+
+                  // Conditional Email (Hidden for Halls)
+                  if (widget.model is! HallModel) ...[
+                    _buildInfoCapsule('Incharge Email', _email, capsulePadding),
+                    SizedBox(height: availableHeight < 650 ? 8 : 12),
+                  ],
                   Row(
                     children: [
                       Expanded(
