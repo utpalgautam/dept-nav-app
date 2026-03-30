@@ -8,6 +8,7 @@ import '../../services/astar_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/navigation_provider.dart';
 import 'floor_transition_screen.dart';
+import 'navigation_completion_screen.dart';
 
 class IndoorNavigationScreen extends StatefulWidget {
   final String buildingId;
@@ -50,6 +51,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   bool _isNavigatingToStairs = false;
   final bool _isDebugMode = false;
+  final Stopwatch _navStopwatch = Stopwatch();
 
   // View toggles
   bool _is3DMode = true;
@@ -70,6 +72,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
   void initState() {
     super.initState();
     _currentFloor = widget.floor;
+    _navStopwatch.start();
     _loadNavigationData();
   }
 
@@ -229,28 +232,45 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
     );
   }
 
+  String _floorLabel(int floor) {
+    switch (floor) {
+      case 0:
+        return 'Ground Floor';
+      case 1:
+        return 'First Floor';
+      case 2:
+        return 'Second Floor';
+      case 3:
+        return 'Third Floor';
+      case 4:
+        return 'Fourth Floor';
+      default:
+        return 'Floor $floor';
+    }
+  }
+
   void _showArrivalDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Destination Reached',
-            style: TextStyle(color: Colors.white)),
-        content: Text('You have arrived at ${widget.destinationNodeLabel ?? _destination?.name ?? "your destination"}.',
-            style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Provider.of<NavigationProvider>(context, listen: false)
-                  .stopNavigation();
-              Navigator.pop(context); // close dialog
-              Navigator.pop(context); // close nav screen
-            },
-            child: const Text('Finish', style: TextStyle(color: Colors.blue)),
-          )
-        ],
+    _navStopwatch.stop();
+    final int elapsedMinutes = _navStopwatch.elapsed.inMinutes;
+    final double distKm = _routeDistanceMeters / 1000.0;
+    Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NavigationCompletionScreen(
+          destinationName:
+              widget.destinationNodeLabel ?? _destination?.name ?? 'Destination',
+          roomNumber: _destination?.roomNumber,
+          floor: _destination?.floor != null
+              ? _floorLabel(_destination!.floor!)
+              : (widget.targetFloor != null
+                  ? _floorLabel(widget.targetFloor!)
+                  : null),
+          buildingName: widget.buildingName,
+          timeTakenMinutes: elapsedMinutes,
+          distanceKm: distKm,
+          isIndoorOnly: true,
+        ),
       ),
     );
   }

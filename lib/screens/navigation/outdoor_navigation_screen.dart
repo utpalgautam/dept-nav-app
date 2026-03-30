@@ -13,6 +13,7 @@ import 'indoor_navigation_screen.dart';
 import '../../core/utils/navigation_utils.dart';
 import '../../models/location_model.dart';
 import '../../services/firestore_service.dart';
+import 'navigation_completion_screen.dart';
 
 enum MapFollowMode { northUp, headingUp }
 
@@ -53,6 +54,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   bool _hasSpokenDestination = false;
   LocationModel? _destinationLocation;
   final FirestoreService _firestoreService = FirestoreService();
+  DateTime? _navigationStartTime;
 
   // ── User Marker (smooth animated blue dot) ────────────────────────────
   Symbol? _userMarker;
@@ -678,6 +680,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   // ─────────────────────────────────────────────────────────────────
   void _startNavigation(NavigationProvider provider) {
     if (provider.currentRoute != null) {
+      _navigationStartTime = DateTime.now();
       provider.startOutdoorNavigation();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -728,7 +731,39 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
             !_isTransitioningToIndoor) {
           _isTransitioningToIndoor = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _navigateToIndoorScreen(context);
+            if (widget.targetBuilding != null) {
+              // Has an indoor leg → transition to indoor navigation screen
+              _navigateToIndoorScreen(context);
+            } else {
+              // Outdoor-only destination reached → show completion screen
+              final elapsed = _navigationStartTime != null
+                  ? DateTime.now()
+                      .difference(_navigationStartTime!)
+                      .inMinutes
+                  : 0;
+              final route = navProvider.currentRoute;
+              final distKm = route != null
+                  ? route.distance / 1000.0
+                  : 0.0;
+              navProvider.stopNavigation();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => NavigationCompletionScreen(
+                    destinationName:
+                        widget.destinationName ?? 'Destination',
+                    roomNumber: _destinationLocation?.roomNumber,
+                    floor: _destinationLocation?.floor != null
+                        ? 'Floor ${_destinationLocation!.floor}'
+                        : null,
+                    buildingName: widget.targetBuilding?.name,
+                    timeTakenMinutes: elapsed,
+                    distanceKm: distKm,
+                    isIndoorOnly: false,
+                  ),
+                ),
+              );
+            }
           });
         }
 
@@ -930,79 +965,12 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                   ),
                 ),
   
-                // ── Arrival Overlay ────────────────────────────────────────
-                if (navProvider.isIndoor) _buildArrivalOverlay(),
+                // ── Arrival overlay removed: NavigationCompletionScreen handles arrival UI
               ],
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildArrivalOverlay() {
-    return Container(
-      color: Colors.black26,
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 30,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle_rounded,
-                  color: Colors.black, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                'Arrived at ${widget.targetBuilding?.name ?? 'Destination'}',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black,
-                  letterSpacing: -0.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Switching to Indoor Navigation...',
-                style: TextStyle(
-                  color: Colors.black.withOpacity(0.5),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 16),
-                ),
-                onPressed: () => _navigateToIndoorScreen(context),
-                child: const Text(
-                  'Continue Indoors',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
