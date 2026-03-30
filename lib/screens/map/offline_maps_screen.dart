@@ -9,7 +9,6 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../directory/directory_screen.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
-import '../home/search_screen.dart';
 import '../navigation/indoor_navigation_setup_screen.dart';
 import 'explore_map_screen.dart';
 import 'offline_floor_map_screen.dart';
@@ -627,4 +626,3 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
     );
   }
 }
-

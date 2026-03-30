@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 import '../../core/constants/colors.dart';
+import '../../models/building_model.dart';
 import '../../models/faculty_model.dart';
 import '../../models/hall_model.dart';
 import '../../models/lab_model.dart';
@@ -14,6 +15,7 @@ import '../navigation/indoor_navigation_setup_screen.dart';
 import '../map/offline_maps_screen.dart';
 import '../profile/profile_screen.dart';
 import '../navigation/outdoor_navigation_screen.dart';
+import 'directory_details_screen.dart';
 
 class DirectoryScreen extends StatefulWidget {
   final int initialSegment;
@@ -127,13 +129,15 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                               ),
                             ),
                             const SizedBox(width: 20),
-                            const Text(
-                              'Directory',
-                              style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
-                                letterSpacing: -0.5,
+                            Expanded(
+                              child: Text(
+                                'Directory',
+                                style: TextStyle(
+                                  fontSize: MediaQuery.of(context).size.width * 0.065 > 26 ? 26 : MediaQuery.of(context).size.width * 0.065,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
                             ),
                           ],
@@ -342,254 +346,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 2),
           itemBuilder: (context, index) {
             final faculty = items[index];
-            return _buildFacultyCard(faculty);
+            return _buildDirectoryCard(
+              title: faculty.name,
+              subtitle: faculty.role.isNotEmpty ? faculty.role : faculty.designation,
+              department: faculty.department,
+              locationId: faculty.locationId,
+              photoUrl: faculty.photoUrl,
+              imageBytes: faculty.imageBytes,
+              model: faculty,
+            );
           },
         );
       },
-    );
-  }
-
-  // ── Dedicated faculty card matching the reference design ───────────────
-  Widget _buildFacultyCard(FacultyModel faculty) {
-    return FutureBuilder<LocationModel?>(
-      future: _getLocationFuture(faculty.locationId),
-      builder: (context, snapshot) {
-        final location = snapshot.data;
-        final roomLabel = location?.roomNumber ?? 'TBA';
-        final floorLabel =
-            location?.floor != null ? 'Floor ${location!.floor}' : 'TBA';
-
-        // Decode base64 image if available
-        final imageBytes = faculty.imageBytes;
-
-        return GestureDetector(
-          onTap: () {
-            _showFacultyDetailsPopup(
-                context, faculty, roomLabel, floorLabel, location);
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1B1B1C),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              children: [
-                // Profile Pic
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white, width: 2),
-                    color: const Color(0xFF333333),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: imageBytes != null
-                        ? Image.memory(
-                            imageBytes,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.person,
-                                color: Color(0xFF9CA3AF),
-                                size: 30),
-                          )
-                        : (faculty.photoUrl != null &&
-                                faculty.photoUrl!.isNotEmpty)
-                            ? Image.network(
-                                faculty.photoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.person,
-                                    color: Color(0xFF9CA3AF),
-                                    size: 30),
-                              )
-                            : const Icon(Icons.person,
-                                color: Color(0xFF9CA3AF), size: 30),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Name
-                Expanded(
-                  child: Text(
-                    faculty.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Navigation Button with Icon and Text
-                GestureDetector(
-                  onTap: () =>
-                      _handleNavigationTap(faculty.locationId, context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.navigation, color: Colors.black, size: 18),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showFacultyDetailsPopup(
-    BuildContext context,
-    FacultyModel faculty,
-    String roomLabel,
-    String floorLabel,
-    LocationModel? location,
-  ) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        final imageBytes = faculty.imageBytes;
-        return Dialog(
-          backgroundColor: const Color(0xFF1B1B1C),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Profile image
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white, width: 3),
-                    color: const Color(0xFF333333),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(21),
-                    child: imageBytes != null
-                        ? Image.memory(
-                            imageBytes,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.person,
-                                color: Color(0xFF9CA3AF),
-                                size: 50),
-                          )
-                        : (faculty.photoUrl != null &&
-                                faculty.photoUrl!.isNotEmpty)
-                            ? Image.network(
-                                faculty.photoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.person,
-                                    color: Color(0xFF9CA3AF),
-                                    size: 50),
-                              )
-                            : const Icon(Icons.person,
-                                color: Color(0xFF9CA3AF), size: 50),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  faculty.name,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: Colors.grey, thickness: 1),
-                const SizedBox(height: 16),
-                _buildDetailRow(
-                    'Designation:',
-                    faculty.role.isNotEmpty
-                        ? faculty.role
-                        : faculty.designation),
-                const SizedBox(height: 10),
-                _buildDetailRow('Department:', faculty.department),
-                const SizedBox(height: 10),
-                if (location != null && location.buildingId != null)
-                  FutureBuilder<dynamic>(
-                    future: _firestoreService.getBuilding(location.buildingId!),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10.0),
-                          child: _buildDetailRow('Building:', 'Loading...'),
-                        );
-                      }
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10.0),
-                          child:
-                              _buildDetailRow('Building:', snapshot.data!.name),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                _buildDetailRow('Cabin:', roomLabel),
-                const SizedBox(height: 10),
-                _buildDetailRow('Email:', faculty.email),
-                const SizedBox(height: 24),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 110,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF909090),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -621,17 +389,16 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         return ListView.separated(
           padding: const EdgeInsets.only(bottom: 120),
           itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          separatorBuilder: (_, __) => const SizedBox(height: 2),
           itemBuilder: (context, index) {
             final hall = items[index];
             return _buildDirectoryCard(
               title: hall.name,
               subtitle: hall.typeString,
-              department: 'CSE', // Hardcoded for matching the design if missing in model
-              contactLabel: '',
-              contactValue: '',
+              department: 'General',
               locationId: hall.locationId,
               fallbackIcon: Icons.meeting_room,
+              model: hall,
             );
           },
         );
@@ -669,17 +436,16 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         return ListView.separated(
           padding: const EdgeInsets.only(bottom: 120),
           itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          separatorBuilder: (_, __) => const SizedBox(height: 2),
           itemBuilder: (context, index) {
             final lab = items[index];
             return _buildDirectoryCard(
               title: lab.name,
-              subtitle: lab.incharge != null ? 'Lab Incharge : ${lab.incharge}' : '',
+              subtitle: 'Laboratory',
               department: lab.department,
-              contactLabel: '', // Merged into subtitle for image matching
-              contactValue: '',
               locationId: lab.locationId,
               fallbackIcon: Icons.science,
+              model: lab,
             );
           },
         );
@@ -691,210 +457,137 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     required String title,
     required String subtitle,
     required String department,
-    required String contactLabel,
-    required String contactValue,
     required String locationId,
+    required dynamic model,
     String? photoUrl,
+    Uint8List? imageBytes,
     IconData fallbackIcon = Icons.person,
   }) {
     return FutureBuilder<LocationModel?>(
       future: _getLocationFuture(locationId),
       builder: (context, snapshot) {
         final location = snapshot.data;
-        final roomLabel = location?.roomNumber ?? 'TBA';
-        final floorLabel =
-            location?.floor != null ? 'Floor ${location!.floor}' : 'TBA';
+        return FutureBuilder<BuildingModel?>(
+          future: (location != null && location.buildingId != null)
+              ? _firestoreService.getBuilding(location.buildingId!)
+              : Future.value(null),
+          builder: (context, bSnapshot) {
+            final buildingName = bSnapshot.data?.name;
 
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B1B1C), // very dark grey
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Stack(
-            children: [
-              // Subtle circle top-right
-              Positioned(
-                top: -60,
-                right: -40,
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.03),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Image (Rounded Square with white border)
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white, width: 2.5),
-                            color: const Color(0xFF333333),
-                            image: (photoUrl != null && photoUrl.isNotEmpty)
-                                ? DecorationImage(
-                                    image: NetworkImage(photoUrl),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: (photoUrl == null || photoUrl.isEmpty)
-                              ? Icon(fallbackIcon,
-                                  color: Colors.white30, size: 36)
-                              : null,
-                        ),
-                        const SizedBox(width: 20),
-                        // Text info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.2,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              if (subtitle.isNotEmpty)
-                                Text(
-                                  subtitle,
-                                  style: const TextStyle(
-                                    color: Color(0xFF888888),
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              if (department.isNotEmpty)
-                                Text(
-                                  department,
-                                  style: const TextStyle(
-                                    color: Color(0xFF888888),
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DirectoryDetailsScreen(
+                      model: model,
+                      location: location,
+                      buildingName: buildingName,
                     ),
-                    const SizedBox(height: 24),
-                    // Footer Row
-                    Row(
-                      children: [
-                        _buildFooterPill(roomLabel),
-                        const SizedBox(width: 10),
-                        _buildFooterPill(floorLabel),
-                        const SizedBox(width: 10),
-                        if (location != null && location.buildingId != null)
-                          FutureBuilder<dynamic>(
-                            future: _firestoreService
-                                .getBuilding(location.buildingId!),
-                            builder: (context, bSnapshot) {
-                              final buildingName = bSnapshot.hasData
-                                  ? bSnapshot.data!.name
-                                  : '...';
-                              return Expanded(
-                                child: _buildFooterPill(buildingName),
-                              );
-                            },
+                  ),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1B1B1C),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    // Profile/Room Image
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white24, width: 1.5),
+                        color: const Color(0xFF333333),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: imageBytes != null
+                            ? Image.memory(imageBytes, fit: BoxFit.cover)
+                            : (photoUrl != null && photoUrl.isNotEmpty)
+                                ? Image.network(photoUrl, fit: BoxFit.cover)
+                                : Icon(fallbackIcon, color: Colors.white38, size: 28),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Info Row
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: MediaQuery.of(context).size.width * 0.04 > 16 ? 16 : MediaQuery.of(context).size.width * 0.04,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        if (location == null || location.buildingId == null)
-                          const Spacer(),
-                        const SizedBox(width: 12),
-                        _buildNavigateButton(locationId, context),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: const Color(0xFF909090),
+                              fontSize: MediaQuery.of(context).size.width * 0.033 > 13 ? 13 : MediaQuery.of(context).size.width * 0.033,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Compact Nav Button
+                    GestureDetector(
+                      onTap: () => _handleNavigationTap(locationId, context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.near_me, color: Colors.black, size: 18),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildFooterPill(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF333436),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavigateButton(String locationId, BuildContext context) {
-    return GestureDetector(
-      onTap: () => _handleNavigationTap(locationId, context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Icon(Icons.navigation, color: Colors.black, size: 20),
-      ),
-    );
-  }
-
-  Future<void> _handleNavigationTap(
-      String locationId, BuildContext context) async {
+  Future<void> _handleNavigationTap(String locationId, BuildContext context) async {
     try {
       // Show loading indicator
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator()),
+        builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.black)),
       );
 
       final location = await _firestoreService.getLocation(locationId);
       if (location != null && location.buildingId != null && mounted) {
-        final building =
-            await _firestoreService.getBuilding(location.buildingId!);
+        final building = await _firestoreService.getBuilding(location.buildingId!);
 
         // Log search for analytics
         if (building != null) {
-          final String platform =
-              kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
+          final String platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
 
           await _firestoreService.logSearch(SearchLogModel(
             buildingId: building.id,
             buildingName: building.name,
             platform: platform,
-            query: location.name, // Use destination name as query
+            query: location.name,
             timestamp: DateTime.now(),
           ));
         }
@@ -902,8 +595,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         if (mounted) {
           Navigator.pop(context); // Close loading dialog
           if (building != null && building.entryPoints.isNotEmpty) {
-            final entryPoint =
-                building.entryPoints.first; // Default to first entry point
+            final entryPoint = building.entryPoints.first;
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -919,8 +611,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Building or entry point data not found.')),
+              const SnackBar(content: Text('Building or entry point data not found.')),
             );
           }
         }
