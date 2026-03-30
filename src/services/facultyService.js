@@ -8,7 +8,8 @@ import {
     updateDoc,
     deleteDoc,
     query,
-    where
+    where,
+    deleteField
 } from 'firebase/firestore';
 
 const FACULTY_COLLECTION = 'faculty';
@@ -76,11 +77,33 @@ async function generateNextFacultyId() {
 
 export async function fetchAllFaculty() {
     try {
-        const snapshot = await getDocs(collection(db, FACULTY_COLLECTION));
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const [facultySnapshot, locationsSnapshot] = await Promise.all([
+            getDocs(collection(db, FACULTY_COLLECTION)),
+            getDocs(query(collection(db, LOCATIONS_COLLECTION), where('type', '==', 'faculty')))
+        ]);
+
+        const locationsMap = {};
+        locationsSnapshot.forEach(docSnap => {
+            locationsMap[docSnap.id] = docSnap.id; 
+            // Better: store the whole data
+            locationsMap[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
+        });
+
+        return facultySnapshot.docs.map(docSnap => {
+            const facultyData = docSnap.data();
+            const location = locationsMap[facultyData.locationId] || {};
+            
+            return {
+                id: docSnap.id,
+                ...facultyData,
+                // Merge location fields into faculty for UI compatibility
+                // STRICTLY use location doc, as requested. 
+                // Non-migrated docs will show empty until updated.
+                building: location.buildingId || '',
+                floor: location.floor !== undefined ? location.floor : '',
+                cabin: location.roomNumber || ''
+            };
+        });
     } catch (err) {
         console.error('Error fetching faculty:', err);
         throw err;
@@ -91,22 +114,16 @@ export async function addFaculty(facultyData) {
     try {
         // 1. Validate required fields
         if (!facultyData.name) throw new Error('Faculty name is required');
-        if (!facultyData.building) throw new Error('Building is required for location mapping');
-
-        // 2. We need to create a Location model first, to get a location ID
-        const nextFacultyId = await generateNextFacultyId();
-        // Use the same ID for location for simplicity, or generate a fresh doc
-        // It's cleaner to let location have its own auto ID or match it
+        
+        // 2. We need to create a Location model first
         const locationRef = doc(collection(db, LOCATIONS_COLLECTION));
-
         const locationData = {
-            name: facultyData.name, // Exactly matches faculty name
-            type: 'faculty', // Based on LocationType.Faculty
-            // We parse the building ID if it's there. Usually building is a name, but let's store it.
+            name: facultyData.name, 
+            type: 'faculty',
             description: `Faculty: ${facultyData.role || ''} - Cabin ${facultyData.cabin || ''}`,
             roomNumber: facultyData.cabin || '',
-            floor: facultyData.floor ? parseInt(facultyData.floor) || 1 : 1, // Store as number if possible
-            buildingId: facultyData.building || '', // Store the building ID (e.g. B1)
+            floor: facultyData.floor ? parseInt(facultyData.floor) || 0 : 0, 
+            buildingId: facultyData.building || '', 
             isActive: true,
             tags: ['faculty', facultyData.role, facultyData.name].filter(Boolean)
         };
@@ -119,24 +136,29 @@ export async function addFaculty(facultyData) {
             imageUrl = await fileToBase64(facultyData.imageFile);
         }
 
-        // 4. Create the faculty document
+        // 4. Create the faculty document (NO building, floor, cabin here)
         const finalFacultyData = {
             name: facultyData.name,
             email: facultyData.email || '',
             role: facultyData.role || '',
             department: facultyData.department || '',
-            cabin: facultyData.cabin || '',
-            building: facultyData.building || '', // This is now the building ID
-            floor: facultyData.floor || '',
             imageUrl: imageUrl,
-            locationId: locationRef.id, // Store the reference to the created location
+            locationId: locationRef.id, 
             createdAt: new Date().toISOString()
         };
 
+        const nextFacultyId = await generateNextFacultyId();
         const docRef = doc(db, FACULTY_COLLECTION, nextFacultyId);
         await setDoc(docRef, finalFacultyData);
 
-        return { id: nextFacultyId, ...finalFacultyData };
+        return { 
+            id: nextFacultyId, 
+            ...finalFacultyData,
+            // Add location details for immediate UI updates
+            building: locationData.buildingId,
+            floor: locationData.floor,
+            cabin: locationData.roomNumber
+        };
     } catch (err) {
         console.error('Error adding faculty:', err);
         throw err;
@@ -151,44 +173,54 @@ export async function updateFaculty(facultyId, facultyData) {
 
         const existingData = snap.data();
 
-        // Update Faculty
-        const dataToUpdate = { ...facultyData, updatedAt: new Date().toISOString() };
+        // 1. Separate Faculty specific fields from Location fields
+        const facultyUpdate = {
+            name: facultyData.name,
+            email: facultyData.email,
+            role: facultyData.role,
+            department: facultyData.department,
+            updatedAt: new Date().toISOString(),
+            // EXPLICITLY remove old fields from the document
+            building: deleteField(),
+            floor: deleteField(),
+            cabin: deleteField()
+        };
 
-        // Handle Base64 Image Compression Update
+        // Handle Image
         if (facultyData.imageFile) {
-            dataToUpdate.imageUrl = await fileToBase64(facultyData.imageFile);
+            facultyUpdate.imageUrl = await fileToBase64(facultyData.imageFile);
         } else if (facultyData.imageUrl !== undefined) {
-            dataToUpdate.imageUrl = facultyData.imageUrl;
+            facultyUpdate.imageUrl = facultyData.imageUrl;
         }
 
-        // Remove transient file object from payload before saving
-        delete dataToUpdate.imageFile;
-        delete dataToUpdate.id; // ensure ID is not in data payload
-        await updateDoc(docRef, dataToUpdate);
+        // Explicitly remove keys we don't want in Faculty doc
+        Object.keys(facultyUpdate).forEach(key => {
+            if (facultyUpdate[key] === undefined) delete facultyUpdate[key];
+        });
 
-        // If there is an associated location entry, update its details too
+        await updateDoc(docRef, facultyUpdate);
+
+        // 2. Update Location document
         if (existingData.locationId) {
             const locRef = doc(db, LOCATIONS_COLLECTION, existingData.locationId);
-            const locSnap = await getDoc(locRef);
-            if (locSnap.exists()) {
-                const locUpdate = {};
-                if (facultyData.name !== undefined) locUpdate.name = facultyData.name; // Keep name synced
-                if (facultyData.role !== undefined || facultyData.cabin !== undefined) {
-                    locUpdate.description = `Faculty: ${facultyData.role || existingData.role} - Cabin ${facultyData.cabin || existingData.cabin}`;
-                }
-                if (facultyData.cabin !== undefined) locUpdate.roomNumber = facultyData.cabin;
-                if (facultyData.building !== undefined) locUpdate.buildingId = facultyData.building;
-                if (facultyData.floor !== undefined) locUpdate.floor = parseInt(facultyData.floor) || 1;
+            const locUpdate = {
+                updatedAt: new Date().toISOString()
+            };
 
-                // Keep tags in sync
-                if (facultyData.name !== undefined || facultyData.role !== undefined) {
-                    locUpdate.tags = ['faculty', facultyData.role || existingData.role, facultyData.name || existingData.name].filter(Boolean);
-                }
+            if (facultyData.name !== undefined) locUpdate.name = facultyData.name;
+            if (facultyData.cabin !== undefined) locUpdate.roomNumber = facultyData.cabin;
+            if (facultyData.building !== undefined) locUpdate.buildingId = facultyData.building;
+            if (facultyData.floor !== undefined) locUpdate.floor = parseInt(facultyData.floor) || 0;
+            
+            // Sync description and tags
+            const currentRole = facultyData.role || existingData.role;
+            const currentName = facultyData.name || existingData.name;
+            const currentCabin = facultyData.cabin || existingData.cabin;
+            
+            locUpdate.description = `Faculty: ${currentRole} - Cabin ${currentCabin}`;
+            locUpdate.tags = ['faculty', currentRole, currentName].filter(Boolean);
 
-                if (Object.keys(locUpdate).length > 0) {
-                    await updateDoc(locRef, locUpdate);
-                }
-            }
+            await updateDoc(locRef, locUpdate);
         }
     } catch (err) {
         console.error('Error updating faculty:', err);

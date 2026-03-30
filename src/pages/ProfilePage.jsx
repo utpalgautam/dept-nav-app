@@ -3,8 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { LuUser, LuMail, LuCamera, LuCheck, LuX, LuPenLine, LuChevronLeft, LuLoaderCircle } from 'react-icons/lu';
 import Header from '../components/Header';
 import { useNavigate } from 'react-router-dom';
-import { storage } from '../services/firebaseConfig';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const ProfilePage = () => {
     const { userData, updateUserData, currentUser } = useAuth();
@@ -24,7 +22,7 @@ const ProfilePage = () => {
         }
     }, [userData]);
 
-    const handleImageChange = async (e) => {
+    const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -34,22 +32,25 @@ const ProfilePage = () => {
             return;
         }
 
-        setUploading(true);
-        setMessage({ type: '', text: '' });
-
-        try {
-            const storageRef = ref(storage, `profile_pics/${currentUser.uid}`);
-            await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
-            setProfilePic(downloadURL);
-            setMessage({ type: 'success', text: 'Image uploaded successfully! Click save to apply.' });
-        } catch (error) {
-            console.error("Error uploading image:", error);
-            setMessage({ type: 'error', text: 'Upload failed. Please try again.' });
-        } finally {
-            setUploading(false);
-            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        // Limit file size (e.g., 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'Image size should be less than 2MB for encoded storage.' });
+            return;
         }
+
+        const reader = new FileReader();
+        reader.onloadstart = () => setUploading(true);
+        reader.onloadend = () => {
+            setProfilePic(reader.result);
+            setUploading(false);
+            setMessage({ type: 'success', text: 'Image loaded successfully! Click save to apply.' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        };
+        reader.onerror = () => {
+            setUploading(false);
+            setMessage({ type: 'error', text: 'Failed to read file.' });
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSave = async (e) => {

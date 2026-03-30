@@ -101,11 +101,13 @@ const HallsLabsPage = () => {
   };
 
   const getProcessedData = () => {
-    let filtered = hallsData.filter(item =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.building.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.type || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = hallsData.filter(item => {
+      const bldgName = buildings.find(b => b.id === item.building)?.name || item.building || '';
+      return item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             bldgName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (item.roomNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (item.type || '').toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     filtered.sort((a, b) => {
       return sortAsc
@@ -168,6 +170,7 @@ const HallsLabsPage = () => {
         <>
           <HallsLabsDirectory
             processedData={paginatedData}
+            buildings={buildings}
             onAdd={handleAdd}
             onEdit={handleEdit}
             onDelete={handleDelete}

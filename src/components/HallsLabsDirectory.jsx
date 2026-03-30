@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FaTrash } from 'react-icons/fa';
 
-const HallsLabsDirectory = ({ processedData, onAdd, onEdit, onDelete, sortAsc, onSortToggle }) => {
+const HallsLabsDirectory = ({ processedData, buildings = [], onAdd, onEdit, onDelete, sortAsc, onSortToggle }) => {
   const getAvatarIcon = (category) => {
     if (category === 'LAB') {
       return (
@@ -31,10 +31,12 @@ const HallsLabsDirectory = ({ processedData, onAdd, onEdit, onDelete, sortAsc, o
     );
   };
 
+  const getBuildingName = (id) => buildings.find(b => b.id === id)?.name || id;
+
   const getLocationString = (bldg, floor, roomNumber) => {
     const parts = [];
-    if (bldg) parts.push(`${bldg} Building`);
-    if (floor) parts.push(`Floor ${floor}`);
+    if (bldg) parts.push(`${getBuildingName(bldg)}`);
+    if (floor !== undefined && floor !== '') parts.push(`Floor ${floor}`);
     if (roomNumber) parts.push(`${roomNumber}`);
     return parts.join(', ') || 'Location Pending';
   };

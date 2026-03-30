@@ -107,26 +107,26 @@ export function floorToFirestore(f: FloorModel) {
 // ----- Hall -----
 export enum HallType { LectureHall = 'lectureHall', SeminarHall = 'seminarHall', Auditorium = 'auditorium', ConferenceRoom = 'conferenceRoom' }
 
-export interface HallModel { id?: string; name: string; type: HallType; locationId: string; capacity: number; contactPerson?: string }
+export interface HallModel { id?: string; name: string; type: HallType; locationId: string; contactPerson?: string }
 
 export function hallFromFirestore(data: any, id?: string): HallModel {
   const t = (String(data?.type ?? 'lectureHall')).toLowerCase();
   const type = t === 'seminarhall' ? HallType.SeminarHall : t === 'auditorium' ? HallType.Auditorium : t === 'conferenceroom' ? HallType.ConferenceRoom : HallType.LectureHall;
-  return { id, name: data?.name ?? '', type, locationId: data?.locationId ?? '', capacity: Number(data?.capacity ?? 0), contactPerson: data?.contactPerson };
+  return { id, name: data?.name ?? '', type, locationId: data?.locationId ?? '', contactPerson: data?.contactPerson };
 }
 
 export function hallToFirestore(h: HallModel) {
-  return { name: h.name, type: String(h.type), locationId: h.locationId, capacity: h.capacity, ...(h.contactPerson ? { contactPerson: h.contactPerson } : {}) };
+  return { name: h.name, type: String(h.type), locationId: h.locationId, ...(h.contactPerson ? { contactPerson: h.contactPerson } : {}) };
 }
 
 // ----- Lab -----
-export interface LabModel { id?: string; name: string; department: string; locationId: string; capacity: number; incharge?: string; inchargeEmail?: string; timing?: { [k: string]: string } }
+export interface LabModel { id?: string; name: string; department: string; locationId: string; incharge?: string; inchargeEmail?: string }
 
 export function labFromFirestore(data: any, id?: string): LabModel {
-  return { id, name: data?.name ?? '', department: data?.department ?? '', locationId: data?.locationId ?? '', capacity: Number(data?.capacity ?? 0), incharge: data?.incharge, inchargeEmail: data?.inchargeEmail, timing: data?.timing ?? {} };
+  return { id, name: data?.name ?? '', department: data?.department ?? '', locationId: data?.locationId ?? '', incharge: data?.incharge, inchargeEmail: data?.inchargeEmail };
 }
 
-export function labToFirestore(l: LabModel) { return { name: l.name, department: l.department, locationId: l.locationId, capacity: l.capacity, ...(l.incharge ? { incharge: l.incharge } : {}), ...(l.inchargeEmail ? { inchargeEmail: l.inchargeEmail } : {}), timing: l.timing ?? {} }; }
+export function labToFirestore(l: LabModel) { return { name: l.name, department: l.department, locationId: l.locationId, ...(l.incharge ? { incharge: l.incharge } : {}), ...(l.inchargeEmail ? { inchargeEmail: l.inchargeEmail } : {}) }; }
 
 
 // ----- Location -----

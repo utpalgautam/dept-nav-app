@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaCloudUploadAlt } from 'react-icons/fa';
+import { fetchFloors } from '../services/floorService';
 
 const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
     const fileInputRef = useRef(null);
@@ -10,20 +11,20 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
         category: 'HALL',
         building: '',
         floor: '',
-        capacity: '',
         status: 'ACTIVE',
         contactPerson: '',
         roomNumber: '',
         department: '',
         incharge: '',
         inchargeEmail: '',
-        timing: {},
         mapUrl: '',
         mapFile: null,
         _localPreview: ''
     });
 
     const [loading, setLoading] = useState(false);
+    const [availableFloors, setAvailableFloors] = useState([]);
+    const [isFloorsLoading, setIsFloorsLoading] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -34,24 +35,54 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                 category: item.category || 'HALL',
                 building: item.building || '',
                 floor: item.floor || '',
-                capacity: item.capacity || '',
                 status: item.status || 'ACTIVE',
                 contactPerson: item.contactPerson || '',
                 roomNumber: item.roomNumber || '',
                 department: item.department || '',
                 incharge: item.incharge || '',
                 inchargeEmail: item.inchargeEmail || '',
-                timing: item.timing || {},
                 mapUrl: item.mapUrl || '',
                 mapFile: null,
                 _localPreview: ''
             });
+            // Load floors immediately for edit mode
+            if (item.building) {
+                loadFloors(item.building);
+            }
         }
     }, [item]);
 
+    const loadFloors = async (buildingId) => {
+        if (!buildingId) {
+            setAvailableFloors([]);
+            return;
+        }
+        setIsFloorsLoading(true);
+        try {
+            const floors = await fetchFloors(buildingId);
+            // Sort floors numerically
+            const sortedFloors = floors.sort((a, b) => a.floorNumber - b.floorNumber);
+            setAvailableFloors(sortedFloors);
+        } catch (err) {
+            console.error('Error loading floors:', err);
+            setError('Failed to load floors for the selected building.');
+        } finally {
+            setIsFloorsLoading(false);
+        }
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'building') {
+            setFormData(prev => ({ 
+                ...prev, 
+                building: value,
+                floor: '' // Reset floor when building changes
+            }));
+            loadFloors(value);
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleCategoryChange = (category) => {
@@ -148,29 +179,27 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                 </div>
                 <div className="hl-form-group">
                     <label>Floor</label>
-                    <input
-                        type="text"
+                    <select
                         name="floor"
                         className="hl-input-pill"
                         value={formData.floor}
                         onChange={handleChange}
-                        placeholder="Select Floor"
-                    />
+                        disabled={!formData.building || isFloorsLoading}
+                        required
+                    >
+                        <option value="" disabled>
+                            {!formData.building ? 'Select building first' : isFloorsLoading ? 'Loading floors...' : 'Select Floor'}
+                        </option>
+                        {availableFloors.map(f => (
+                            <option key={f.id} value={f.floorNumber}>
+                                {f.name || `Floor ${f.floorNumber}`}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
             <div className="hl-form-grid">
-                <div className="hl-form-group">
-                    <label>Capacity</label>
-                    <input
-                        type="number"
-                        name="capacity"
-                        className="hl-input-pill"
-                        value={formData.capacity}
-                        onChange={handleChange}
-                        placeholder="45"
-                    />
-                </div>
                 <div className="hl-form-group">
                     <label>Status</label>
                     <select name="status" className="hl-input-pill" value={formData.status} onChange={handleChange}>
@@ -178,6 +207,17 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                         <option value="MAINTENANCE">Maintenance</option>
                         <option value="CLOSED">Closed</option>
                     </select>
+                </div>
+                <div className="hl-form-group">
+                    <label>Department</label>
+                    <input
+                        type="text"
+                        name="department"
+                        className="hl-input-pill"
+                        value={formData.department}
+                        onChange={handleChange}
+                        placeholder="e.g. Computer Science"
+                    />
                 </div>
             </div>
 
@@ -211,17 +251,6 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
             {isLab && (
                 <>
                     <div className="hl-form-grid">
-                        <div className="hl-form-group">
-                            <label>Department</label>
-                            <input
-                                type="text"
-                                name="department"
-                                className="hl-input-pill"
-                                value={formData.department}
-                                onChange={handleChange}
-                                placeholder="Computer Science"
-                            />
-                        </div>
                         <div className="hl-form-group">
                             <label>Room Number</label>
                             <input

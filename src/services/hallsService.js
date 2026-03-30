@@ -8,7 +8,8 @@ import {
     updateDoc,
     deleteDoc,
     query,
-    orderBy
+    where,
+    deleteField
 } from 'firebase/firestore';
 
 const HALLS_COLLECTION = 'halls';
@@ -75,12 +76,30 @@ async function generateNextId() {
 
 export async function fetchAllHalls() {
     try {
-        const snapshot = await getDocs(collection(db, HALLS_COLLECTION));
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            category: 'HALL'
-        }));
+        const [hallsSnapshot, locationsSnapshot] = await Promise.all([
+            getDocs(collection(db, HALLS_COLLECTION)),
+            getDocs(query(collection(db, LOCATIONS_COLLECTION), where('type', '==', 'hall')))
+        ]);
+
+        const locationsMap = {};
+        locationsSnapshot.forEach(docSnap => {
+            locationsMap[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
+        });
+
+        return hallsSnapshot.docs.map(docSnap => {
+            const hallData = docSnap.data();
+            const location = locationsMap[hallData.locationId] || {};
+            
+            return {
+                id: docSnap.id,
+                ...hallData,
+                // Merge location fields into hall for UI compatibility
+                building: location.buildingId || '',
+                floor: location.floor !== undefined ? location.floor : '',
+                roomNumber: location.roomNumber || '',
+                category: 'HALL'
+            };
+        });
     } catch (err) {
         console.error('Error fetching halls:', err);
         throw err;
@@ -90,49 +109,45 @@ export async function fetchAllHalls() {
 export async function addHall(itemData) {
     try {
         if (!itemData.name) throw new Error('Name is required');
-        if (!itemData.building) throw new Error('Building is required');
 
-        const nextId = await generateNextId();
+        // 1. Create Location document
         const locationRef = doc(collection(db, LOCATIONS_COLLECTION));
-
-        // Create Location Model
         const locationData = {
             name: itemData.name,
             type: 'hall',
-            buildingId: itemData.building,
+            buildingId: itemData.building || '',
             floor: parseInt(itemData.floor) || 0,
+            roomNumber: itemData.roomNumber || '',
             description: `Hall: ${itemData.name} - ${itemData.status}`,
             isActive: itemData.status === 'ACTIVE',
-            tags: ['hall', itemData.name, itemData.building].filter(Boolean)
+            tags: ['hall', itemData.name, itemData.building, itemData.department].filter(Boolean)
         };
 
         await setDoc(locationRef, locationData);
 
-        // Process Map Base64
-        let mapUrl = itemData.mapUrl || null;
-        if (itemData.mapFile) {
-            mapUrl = await fileToBase64(itemData.mapFile);
-        }
-
-        // Create Hall Model
+        // 2. Create Hall document (Strictly normalized)
         const finalItemData = {
             name: itemData.name,
             type: itemData.type,
+            department: itemData.department || '',
             locationId: locationRef.id,
-            capacity: parseInt(itemData.capacity) || 0,
             contactPerson: itemData.contactPerson || null,
-            roomNumber: itemData.roomNumber || null,
-            building: itemData.building, // Building ID (e.g. B1)
-            floor: itemData.floor,
             status: itemData.status,
-            mapUrl: mapUrl,
             createdAt: new Date().toISOString()
         };
 
+        const nextId = await generateNextId();
         const docRef = doc(db, HALLS_COLLECTION, nextId);
         await setDoc(docRef, finalItemData);
 
-        return { id: nextId, ...finalItemData };
+        return { 
+            id: nextId, 
+            ...finalItemData,
+            building: locationData.buildingId,
+            floor: locationData.floor,
+            roomNumber: locationData.roomNumber,
+            category: 'HALL'
+        };
     } catch (err) {
         console.error('Error adding hall:', err);
         throw err;
@@ -146,43 +161,57 @@ export async function updateHall(id, itemData) {
         if (!snap.exists()) throw new Error('Hall not found');
 
         const existingData = snap.data();
-        const dataToUpdate = { ...itemData, updatedAt: new Date().toISOString() };
 
-        // Handle Base64 Image Update
-        if (itemData.mapFile) {
-            dataToUpdate.mapUrl = await fileToBase64(itemData.mapFile);
-        } else if (itemData.mapUrl !== undefined) {
-            dataToUpdate.mapUrl = itemData.mapUrl;
-        }
+        // 1. Update Hall (Clean structure)
+        const hallUpdate = {
+            name: itemData.name,
+            type: itemData.type,
+            department: itemData.department,
+            contactPerson: itemData.contactPerson,
+            status: itemData.status,
+            updatedAt: new Date().toISOString(),
+            // EXPLICITLY remove legacy fields
+            building: deleteField(),
+            floor: deleteField(),
+            roomNumber: deleteField(),
+            capacity: deleteField(),
+            mapUrl: deleteField(),
+            cabin: deleteField(),
+            incharge: deleteField(),
+            inchargeEmail: deleteField(),
+            timing: deleteField()
+        };
 
-        delete dataToUpdate.mapFile;
-        delete dataToUpdate.id;
-        delete dataToUpdate.category;
+        // Filter out undefined values but KEEP deleteField()
+        Object.keys(hallUpdate).forEach(key => {
+            if (hallUpdate[key] === undefined) delete hallUpdate[key];
+        });
 
-        await updateDoc(docRef, dataToUpdate);
+        await updateDoc(docRef, hallUpdate);
 
-        // Sync with Location
+        // 2. Update Location
         if (existingData.locationId) {
             const locRef = doc(db, LOCATIONS_COLLECTION, existingData.locationId);
-            const locSnap = await getDoc(locRef);
-            if (locSnap.exists()) {
-                const locUpdate = {};
-                if (itemData.name !== undefined) locUpdate.name = itemData.name;
-                if (itemData.building !== undefined) locUpdate.buildingId = itemData.building;
-                if (itemData.floor !== undefined) locUpdate.floor = parseInt(itemData.floor) || 0;
-                if (itemData.status !== undefined) {
-                    locUpdate.isActive = itemData.status === 'ACTIVE';
-                    locUpdate.description = `Hall: ${itemData.name || existingData.name} - ${itemData.status}`;
-                }
+            const locUpdate = {
+                updatedAt: new Date().toISOString()
+            };
 
-                if (itemData.name !== undefined || itemData.building !== undefined) {
-                    locUpdate.tags = ['hall', itemData.name || existingData.name, itemData.building || existingData.building].filter(Boolean);
-                }
-
-                if (Object.keys(locUpdate).length > 0) {
-                    await updateDoc(locRef, locUpdate);
-                }
+            if (itemData.name !== undefined) locUpdate.name = itemData.name;
+            if (itemData.building !== undefined) locUpdate.buildingId = itemData.building;
+            if (itemData.floor !== undefined) locUpdate.floor = parseInt(itemData.floor) || 0;
+            if (itemData.roomNumber !== undefined) locUpdate.roomNumber = itemData.roomNumber;
+            
+            if (itemData.status !== undefined || itemData.name !== undefined) {
+                const currentStatus = itemData.status || existingData.status;
+                const currentName = itemData.name || existingData.name;
+                const currentBuilding = itemData.building || existingData.building || '';
+                
+                locUpdate.isActive = currentStatus === 'ACTIVE';
+                locUpdate.description = `Hall: ${currentName} - ${currentStatus}`;
+                locUpdate.tags = ['hall', currentName, currentBuilding, itemData.department || existingData.department].filter(Boolean);
             }
+
+            await updateDoc(locRef, locUpdate);
         }
     } catch (err) {
         console.error('Error updating hall:', err);

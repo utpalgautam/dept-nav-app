@@ -6,7 +6,10 @@ import {
     doc,
     setDoc,
     updateDoc,
-    deleteDoc
+    deleteDoc,
+    query,
+    where,
+    deleteField
 } from 'firebase/firestore';
 
 const LABS_COLLECTION = 'labs';
@@ -73,12 +76,30 @@ async function generateNextId() {
 
 export async function fetchAllLabs() {
     try {
-        const snapshot = await getDocs(collection(db, LABS_COLLECTION));
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            category: 'LAB'
-        }));
+        const [labsSnapshot, locationsSnapshot] = await Promise.all([
+            getDocs(collection(db, LABS_COLLECTION)),
+            getDocs(query(collection(db, LOCATIONS_COLLECTION), where('type', '==', 'lab')))
+        ]);
+
+        const locationsMap = {};
+        locationsSnapshot.forEach(docSnap => {
+            locationsMap[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
+        });
+
+        return labsSnapshot.docs.map(docSnap => {
+            const labData = docSnap.data();
+            const location = locationsMap[labData.locationId] || {};
+            
+            return {
+                id: docSnap.id,
+                ...labData,
+                // Merge location fields into lab for UI compatibility
+                building: location.buildingId || '',
+                floor: location.floor !== undefined ? location.floor : '',
+                roomNumber: location.roomNumber || '',
+                category: 'LAB'
+            };
+        });
     } catch (err) {
         console.error('Error fetching labs:', err);
         throw err;
@@ -88,17 +109,15 @@ export async function fetchAllLabs() {
 export async function addLab(itemData) {
     try {
         if (!itemData.name) throw new Error('Name is required');
-        if (!itemData.building) throw new Error('Building is required');
 
-        const nextId = await generateNextId();
+        // 1. Create Location document
         const locationRef = doc(collection(db, LOCATIONS_COLLECTION));
-
-        // Create Location Model
         const locationData = {
             name: itemData.name,
             type: 'lab',
-            buildingId: itemData.building,
+            buildingId: itemData.building || '',
             floor: parseInt(itemData.floor) || 0,
+            roomNumber: itemData.roomNumber || '',
             description: `Lab: ${itemData.name} - ${itemData.status}`,
             isActive: itemData.status === 'ACTIVE',
             tags: ['lab', itemData.name, itemData.building, itemData.department].filter(Boolean)
@@ -106,33 +125,30 @@ export async function addLab(itemData) {
 
         await setDoc(locationRef, locationData);
 
-        // Process Map Base64
-        let mapUrl = itemData.mapUrl || null;
-        if (itemData.mapFile) {
-            mapUrl = await fileToBase64(itemData.mapFile);
-        }
-
-        // Create Lab Model
+        // 2. Create Lab document (Strictly normalized)
         const finalItemData = {
             name: itemData.name,
+            type: itemData.type || 'LABORATORY',
             department: itemData.department || '',
-            roomNumber: itemData.roomNumber || null,
             locationId: locationRef.id,
-            capacity: parseInt(itemData.capacity) || 0,
             incharge: itemData.incharge || null,
             inchargeEmail: itemData.inchargeEmail || null,
-            timing: itemData.timing || {},
-            building: itemData.building, // Building ID (e.g. B1)
-            floor: itemData.floor,
             status: itemData.status,
-            mapUrl: mapUrl,
             createdAt: new Date().toISOString()
         };
 
+        const nextId = await generateNextId();
         const docRef = doc(db, LABS_COLLECTION, nextId);
         await setDoc(docRef, finalItemData);
 
-        return { id: nextId, ...finalItemData };
+        return { 
+            id: nextId, 
+            ...finalItemData,
+            building: locationData.buildingId,
+            floor: locationData.floor,
+            roomNumber: locationData.roomNumber,
+            category: 'LAB'
+        };
     } catch (err) {
         console.error('Error adding lab:', err);
         throw err;
@@ -146,43 +162,58 @@ export async function updateLab(id, itemData) {
         if (!snap.exists()) throw new Error('Lab not found');
 
         const existingData = snap.data();
-        const dataToUpdate = { ...itemData, updatedAt: new Date().toISOString() };
 
-        // Handle Base64 Image Update
-        if (itemData.mapFile) {
-            dataToUpdate.mapUrl = await fileToBase64(itemData.mapFile);
-        } else if (itemData.mapUrl !== undefined) {
-            dataToUpdate.mapUrl = itemData.mapUrl;
-        }
+        // 1. Update Lab (Clean structure)
+        const labUpdate = {
+            name: itemData.name,
+            type: itemData.type || 'LABORATORY',
+            department: itemData.department,
+            incharge: itemData.incharge,
+            inchargeEmail: itemData.inchargeEmail,
+            status: itemData.status,
+            updatedAt: new Date().toISOString(),
+            // EXPLICITLY remove legacy fields
+            building: deleteField(),
+            floor: deleteField(),
+            roomNumber: deleteField(),
+            capacity: deleteField(),
+            mapUrl: deleteField(),
+            timing: deleteField(),
+            contactPerson: deleteField(),
+            localPreview: deleteField(),
+            _localPreview: deleteField()
+        };
 
-        delete dataToUpdate.mapFile;
-        delete dataToUpdate.id;
-        delete dataToUpdate.category;
+        // Filter out undefined values but KEEP deleteField()
+        Object.keys(labUpdate).forEach(key => {
+            if (labUpdate[key] === undefined) delete labUpdate[key];
+        });
 
-        await updateDoc(docRef, dataToUpdate);
+        await updateDoc(docRef, labUpdate);
 
-        // Sync with Location
+        // 2. Update Location
         if (existingData.locationId) {
             const locRef = doc(db, LOCATIONS_COLLECTION, existingData.locationId);
-            const locSnap = await getDoc(locRef);
-            if (locSnap.exists()) {
-                const locUpdate = {};
-                if (itemData.name !== undefined) locUpdate.name = itemData.name;
-                if (itemData.building !== undefined) locUpdate.buildingId = itemData.building;
-                if (itemData.floor !== undefined) locUpdate.floor = parseInt(itemData.floor) || 0;
-                if (itemData.status !== undefined) {
-                    locUpdate.isActive = itemData.status === 'ACTIVE';
-                    locUpdate.description = `Lab: ${itemData.name || existingData.name} - ${itemData.status}`;
-                }
+            const locUpdate = {
+                updatedAt: new Date().toISOString()
+            };
 
-                if (itemData.name !== undefined || itemData.building !== undefined || itemData.department !== undefined) {
-                    locUpdate.tags = ['lab', itemData.name || existingData.name, itemData.building || existingData.building, itemData.department || existingData.department].filter(Boolean);
-                }
-
-                if (Object.keys(locUpdate).length > 0) {
-                    await updateDoc(locRef, locUpdate);
-                }
+            if (itemData.name !== undefined) locUpdate.name = itemData.name;
+            if (itemData.building !== undefined) locUpdate.buildingId = itemData.building;
+            if (itemData.floor !== undefined) locUpdate.floor = parseInt(itemData.floor) || 0;
+            if (itemData.roomNumber !== undefined) locUpdate.roomNumber = itemData.roomNumber;
+            
+            if (itemData.status !== undefined || itemData.name !== undefined) {
+                const currentStatus = itemData.status || existingData.status;
+                const currentName = itemData.name || existingData.name;
+                const currentBuilding = itemData.building || existingData.building || '';
+                
+                locUpdate.isActive = currentStatus === 'ACTIVE';
+                locUpdate.description = `Lab: ${currentName} - ${currentStatus}`;
+                locUpdate.tags = ['lab', currentName, currentBuilding, itemData.department || existingData.department].filter(Boolean);
             }
+
+            await updateDoc(locRef, locUpdate);
         }
     } catch (err) {
         console.error('Error updating lab:', err);

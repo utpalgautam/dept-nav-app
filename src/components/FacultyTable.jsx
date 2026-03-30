@@ -6,7 +6,7 @@ const FacultyTable = ({ facultyData, buildings = [], onEdit, onDelete }) => {
   const getLocationString = (faculty) => {
     const parts = [];
     if (faculty.building) parts.push(getBuildingName(faculty.building));
-    if (faculty.floor) parts.push(`Floor ${faculty.floor}`);
+    if (faculty.floor !== undefined && faculty.floor !== '') parts.push(`Floor ${faculty.floor}`);
     if (faculty.cabin) parts.push(faculty.cabin);
     return parts.join(', ') || 'Unassigned';
   };
