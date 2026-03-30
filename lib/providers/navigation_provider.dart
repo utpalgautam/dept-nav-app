@@ -66,6 +66,8 @@ class NavigationProvider extends ChangeNotifier {
   bool _isMapRotationEnabled = false;
   String _lastSpokenInstruction = "";
   double _currentHeading = 0.0; // In radians
+  double _pdrHeadingOffset = 0.0;
+  bool _isPdrInitialized = false;
   
   StreamSubscription<AccelerometerEvent>? _accelSubscription;
   StreamSubscription<MagnetometerEvent>? _magSubscription;
@@ -218,6 +220,7 @@ class NavigationProvider extends ChangeNotifier {
       if (startY != null) _indoorY = startY;
       _currentIndoorGraph = graph;
       _currentSnappedEdge = null;
+      _isPdrInitialized = false;
       _startPdrSensors();
     } else {
       _stopPdrSensors();
@@ -355,10 +358,26 @@ class NavigationProvider extends ChangeNotifier {
       }
     }
 
+    // 2.8 PDR Initial Alignment (New)
+    if (_isPdrEnabled && !_isPdrInitialized && _currentIndoorPath.length >= 2) {
+      try {
+        final p1 = _currentIndoorPath[0];
+        final p2 = _currentIndoorPath[1];
+        double routeAngle = math.atan2(p2.y - p1.y, p2.x - p1.x);
+        _pdrHeadingOffset = routeAngle - newHeading;
+        _isPdrInitialized = true;
+        debugPrint("PDR Initialized. Route Angle: $routeAngle, Sensor Heading: $newHeading, Offset: $_pdrHeadingOffset");
+      } catch (e) {
+        debugPrint("Error initializing PDR alignment: $e");
+      }
+    }
+
+    double adjustedHeading = newHeading + _pdrHeadingOffset;
+
     // 3. Smoothing with Wrap-around Handling
     // smoothHeading = prev + 0.1 * (new - prev)
     // We must ensure the difference (new - prev) is within [-pi, pi]
-    double diff = newHeading - _currentHeading;
+    double diff = adjustedHeading - _currentHeading;
     while (diff < -math.pi) diff += 2 * math.pi;
     while (diff > math.pi) diff -= 2 * math.pi;
 
@@ -414,6 +433,9 @@ class NavigationProvider extends ChangeNotifier {
         _updateIndoorInstruction();
       } else {
         _currentIndoorInstruction = "You have arrived at your destination";
+        // Final Snap: Force to destination node coordinates
+        _indoorX = nextNode.x;
+        _indoorY = nextNode.y;
       }
     } else {
       // Update "Go straight for X meters"
@@ -477,6 +499,37 @@ class NavigationProvider extends ChangeNotifier {
     math.Point<double> bestPoint = math.Point(x, y);
     GraphEdge? bestEdge;
 
+    // 1. Priority Snapping: Try edges on the current active route first
+    if (_currentIndoorPath.isNotEmpty) {
+      for (int i = 0; i < _currentIndoorPath.length - 1; i++) {
+        final nodeFrom = _currentIndoorPath[i];
+        final nodeTo = _currentIndoorPath[i + 1];
+
+        final snapped = _projectPointToSegment(
+          math.Point(x, y),
+          math.Point(nodeFrom.x, nodeFrom.y),
+          math.Point(nodeTo.x, nodeTo.y),
+        );
+
+        double dist = math.Point(x, y).distanceTo(snapped);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestPoint = snapped;
+          try {
+            bestEdge = _currentIndoorGraph!.edges.firstWhere((e) =>
+                (e.from == nodeFrom.id && e.to == nodeTo.id) ||
+                (e.from == nodeTo.id && e.to == nodeFrom.id));
+          } catch (_) {}
+        }
+      }
+
+      // If we are close to the route (within ~5 meters), stick to it strictly
+      if (minDistance < 200.0) {
+        return (point: bestPoint, edge: bestEdge);
+      }
+    }
+
+    // 2. Fallback Snapping: Check all graph edges if off-route or no path
     for (var edge in _currentIndoorGraph!.edges) {
       final nodeFrom = _currentIndoorGraph!.nodes.firstWhere((n) => n.id == edge.from);
       final nodeTo = _currentIndoorGraph!.nodes.firstWhere((n) => n.id == edge.to);
