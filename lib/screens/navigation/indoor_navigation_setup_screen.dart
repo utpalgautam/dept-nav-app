@@ -51,7 +51,8 @@ class _IndoorNavigationSetupScreenState
     debugPrint('IndoorNavigationSetupScreen: _loadBuildings started');
     try {
       final buildings = await _firestoreService.getAllBuildings();
-      debugPrint('IndoorNavigationSetupScreen: _loadBuildings loaded ${buildings.length} buildings');
+      debugPrint(
+          'IndoorNavigationSetupScreen: _loadBuildings loaded ${buildings.length} buildings');
       if (mounted) {
         setState(() {
           _buildings = buildings;
@@ -92,12 +93,15 @@ class _IndoorNavigationSetupScreenState
       Map<GraphNode, int> floorMap = {};
 
       // Fetch all floor graphs in parallel
-      final futures = List.generate(building.totalFloors, (floor) => _firestoreService.getIndoorGraph(building.id, floor));
+      final futures = List.generate(building.totalFloors,
+          (floor) => _firestoreService.getIndoorGraph(building.id, floor));
       final graphs = await Future.wait(futures);
 
       for (var graph in graphs) {
         if (graph != null) {
-          final validNodes = graph.nodes.where((n) => n.type.toLowerCase() != 'hallway').toList();
+          final validNodes = graph.nodes
+              .where((n) => n.type.toLowerCase() != 'hallway')
+              .toList();
           aggregatedNodes.addAll(validNodes);
           for (var node in validNodes) {
             floorMap[node] = graph.floorNo;
@@ -117,12 +121,12 @@ class _IndoorNavigationSetupScreenState
       if (mounted) {
         setState(() => _isLoadingGraph = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load building destinations.')),
+          const SnackBar(
+              content: Text('Failed to load building destinations.')),
         );
       }
     }
   }
-
 
   Future<void> _onStartNavigation() async {
     if (_selectedBuilding == null ||
@@ -174,7 +178,8 @@ class _IndoorNavigationSetupScreenState
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('IndoorNavigationSetupScreen: build (isLoading: $_isLoadingBuildings, buildings: ${_buildings.length})');
+    debugPrint(
+        'IndoorNavigationSetupScreen: build (isLoading: $_isLoadingBuildings, buildings: ${_buildings.length})');
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Stack(
@@ -185,7 +190,8 @@ class _IndoorNavigationSetupScreenState
               child: _isLoadingBuildings
                   ? const Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 120.0),
+                      padding:
+                          const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 120.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -199,7 +205,8 @@ class _IndoorNavigationSetupScreenState
                                   shape: BoxShape.circle,
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                  icon: const Icon(Icons.arrow_back,
+                                      color: Colors.white),
                                   onPressed: () {
                                     if (Navigator.canPop(context)) {
                                       Navigator.pop(context);
@@ -207,7 +214,8 @@ class _IndoorNavigationSetupScreenState
                                       Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
-                                              builder: (_) => const HomeScreen()));
+                                              builder: (_) =>
+                                                  const HomeScreen()));
                                     }
                                   },
                                 ),
@@ -224,7 +232,7 @@ class _IndoorNavigationSetupScreenState
                             ],
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Content Card
                           Container(
                             padding: const EdgeInsets.all(24),
@@ -259,22 +267,25 @@ class _IndoorNavigationSetupScreenState
                                   onChanged: _onBuildingChanged,
                                 ),
                                 const SizedBox(height: 16),
-                                 const SizedBox(height: 16),
+                                const SizedBox(height: 16),
                                 _buildDropdown<GraphNode>(
                                   label: '2. Start Node',
                                   hint: 'Select Start Node',
                                   value: _selectedStartNode,
                                   items: _allBuildingNodes.map((n) {
                                     final floor = _nodeFloorMap[n];
-                                    final floorLabel = floor == 0 ? 'GF' : 'F$floor';
+                                    final floorLabel =
+                                        floor == 0 ? 'GF' : 'F$floor';
                                     return DropdownMenuItem(
                                       value: n,
-                                      child: Text('${n.label} (${n.type}, $floorLabel)'),
+                                      child: Text(
+                                          '${n.label} (${n.type}, $floorLabel)'),
                                     );
                                   }).toList(),
                                   onChanged: _allBuildingNodes.isEmpty
                                       ? null
-                                      : (val) => setState(() => _selectedStartNode = val),
+                                      : (val) => setState(
+                                          () => _selectedStartNode = val),
                                 ),
                                 const SizedBox(height: 16),
                                 _buildDropdown<GraphNode>(
@@ -283,15 +294,18 @@ class _IndoorNavigationSetupScreenState
                                   value: _selectedEndNode,
                                   items: _allBuildingNodes.map((n) {
                                     final floor = _nodeFloorMap[n];
-                                    final floorLabel = floor == 0 ? 'GF' : 'F$floor';
+                                    final floorLabel =
+                                        floor == 0 ? 'GF' : 'F$floor';
                                     return DropdownMenuItem(
                                       value: n,
-                                      child: Text('${n.label} (${n.type}, $floorLabel)'),
+                                      child: Text(
+                                          '${n.label} (${n.type}, $floorLabel)'),
                                     );
                                   }).toList(),
                                   onChanged: _allBuildingNodes.isEmpty
                                       ? null
-                                      : (val) => setState(() => _selectedEndNode = val),
+                                      : (val) => setState(
+                                          () => _selectedEndNode = val),
                                 ),
                                 const SizedBox(height: 48),
                                 _buildStartNavigationSlider(),
@@ -333,7 +347,8 @@ class _IndoorNavigationSetupScreenState
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          double maxWidth = constraints.maxWidth - 64; // Account for handle width
+          double maxWidth =
+              constraints.maxWidth - 64; // Account for handle width
           return Stack(
             children: [
               Center(
@@ -358,7 +373,8 @@ class _IndoorNavigationSetupScreenState
                       ? (details) {
                           setState(() {
                             _sliderPosition += details.delta.dx;
-                            _sliderPosition = _sliderPosition.clamp(0.0, maxWidth);
+                            _sliderPosition =
+                                _sliderPosition.clamp(0.0, maxWidth);
                           });
                         }
                       : null,
