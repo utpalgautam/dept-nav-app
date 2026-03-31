@@ -329,12 +329,17 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '${widget.distance} • ${widget.arrivalTime ?? "..."}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black.withOpacity(0.5),
-                        fontWeight: FontWeight.w700,
+                    Flexible(
+                      child: Text(
+                        '${widget.distance} • ${widget.arrivalTime ?? "..."}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black.withOpacity(0.5),
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
@@ -398,13 +403,17 @@ class _InfoChipVertical extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 20, color: Colors.black),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

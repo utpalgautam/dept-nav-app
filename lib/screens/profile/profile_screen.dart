@@ -24,10 +24,24 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _initializedPrefs = false;
   String _selectedSpeed = 'Normal';
   String _selectedDistanceMetric = 'Kilometers';
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedPrefs) {
+      final user = context.read<app_auth.AuthProvider>().currentUser;
+      if (user != null) {
+        _selectedSpeed = user.preferences['walkingSpeed'] ?? 'Normal';
+        _selectedDistanceMetric = user.preferences['distanceMetric'] ?? 'Meters';
+      }
+      _initializedPrefs = true;
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -237,6 +251,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           setState(() {
                             _selectedDistanceMetric = newValue;
                           });
+                          final prefs = Map<String, dynamic>.from(auth.currentUser?.preferences ?? {});
+                          prefs['distanceMetric'] = newValue;
+                          auth.updatePreferences(prefs);
                         }
                       },
                       items: <String>['Meters', 'Kilometers', 'Feet']
@@ -250,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
-                _buildWalkingSpeedRow(),
+                _buildWalkingSpeedRow(auth),
               ]),
               const SizedBox(height: 32),
               
@@ -483,7 +500,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildWalkingSpeedRow() {
+  Widget _buildWalkingSpeedRow(app_auth.AuthProvider auth) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -504,9 +521,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: Row(
               children: [
-                _buildSpeedSegment('Slow'),
-                _buildSpeedSegment('Normal'),
-                _buildSpeedSegment('Fast'),
+                _buildSpeedSegment('Slow', auth),
+                _buildSpeedSegment('Normal', auth),
+                _buildSpeedSegment('Fast', auth),
               ],
             ),
           ),
@@ -528,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSpeedSegment(String speed) {
+  Widget _buildSpeedSegment(String speed, app_auth.AuthProvider auth) {
     final isSelected = _selectedSpeed.toLowerCase() == speed.toLowerCase();
     return Expanded(
       child: GestureDetector(
@@ -536,6 +553,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() {
             _selectedSpeed = speed;
           });
+          final prefs = Map<String, dynamic>.from(auth.currentUser?.preferences ?? {});
+          prefs['walkingSpeed'] = speed;
+          auth.updatePreferences(prefs);
         },
         child: Container(
           margin: const EdgeInsets.all(4),

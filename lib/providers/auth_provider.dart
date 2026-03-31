@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 
 // Key must match the one in main.dart
 const String _kHasSeenOnboarding = 'hasSeenOnboarding';
@@ -180,6 +181,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // ── Preferences Management ────────────────────────────────────────────────
+  Future<bool> updatePreferences(Map<String, dynamic> preferences) async {
+    if (_currentUser == null) return false;
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authService.updatePreferences(preferences);
+      _currentUser = _currentUser!.copyWith(preferences: preferences);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ── Password Management ───────────────────────────────────────────────────
   Future<bool> resetPassword({required String email}) async {
     _setLoading(true);
@@ -240,6 +260,66 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void clearError() => _clearError();
+
+  // ── Search History Management ──────────────────────────────────────────
+  Future<void> addRecentSearch(String locationId) async {
+    if (_currentUser == null) return;
+
+    try {
+      final FirestoreService firestoreService = FirestoreService();
+      await firestoreService.addRecentSearch(_currentUser!.uid, locationId);
+      
+      // Update local state
+      List<String> recent = List<String>.from(_currentUser!.recentSearches);
+      // Ensure absolute uniqueness: remove all occurrences before inserting at front
+      recent.removeWhere((id) => id == locationId);
+      recent.insert(0, locationId);
+      
+      // Limit to 8
+      if (recent.length > 8) {
+        recent = recent.sublist(0, 8);
+      }
+      
+      debugPrint('AuthProvider: Updated recentSearches locally: $recent');
+      _currentUser = _currentUser!.copyWith(recentSearches: recent);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error adding recent search: $e');
+    }
+  }
+
+  Future<void> removeRecentSearch(String locationId) async {
+    if (_currentUser == null) return;
+
+    try {
+      final FirestoreService firestoreService = FirestoreService();
+      await firestoreService.removeRecentSearch(_currentUser!.uid, locationId);
+      
+      // Update local state
+      List<String> recent = List<String>.from(_currentUser!.recentSearches);
+      recent.removeWhere((id) => id == locationId);
+      
+      _currentUser = _currentUser!.copyWith(recentSearches: recent);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error removing recent search: $e');
+    }
+  }
+
+  Future<void> clearRecentSearches() async {
+    if (_currentUser == null) return;
+
+    try {
+      final FirestoreService firestoreService = FirestoreService();
+      await firestoreService.clearAllRecentSearches(_currentUser!.uid);
+      
+      // Update local state
+      _currentUser = _currentUser!.copyWith(recentSearches: []);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error clearing recent searches: $e');
+    }
+  }
 
   void _setLoading(bool value) {
     _isLoading = value;
