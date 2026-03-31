@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaArrowLeft } from 'react-icons/fa';
+import { DEPARTMENTS } from '../constants/departments';
 
 const UserForm = ({ user, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -110,14 +111,22 @@ const UserForm = ({ user, onSave, onCancel }) => {
                         {/* Branch */}
                         <div className="user-form-group">
                             <label>Branch</label>
-                            <input
-                                type="text"
-                                name="department"
-                                value={formData.department}
-                                onChange={handleChange}
-                                placeholder="Dr. John Green"
-                                className="user-form-input"
-                            />
+                            <div className="user-form-select-wrapper">
+                                <select
+                                    name="department"
+                                    value={formData.department}
+                                    onChange={handleChange}
+                                    className="user-form-input user-form-select"
+                                >
+                                    <option value="" disabled>Select Department</option>
+                                    {DEPARTMENTS.map(dept => (
+                                        <option key={dept.value} value={dept.value}>{dept.label}</option>
+                                    ))}
+                                </select>
+                                <div className="user-form-select-icon">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Year */}

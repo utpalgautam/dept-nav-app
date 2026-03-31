@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FaArrowLeft, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
+import { DEPARTMENTS } from '../constants/departments';
 
 /**
  * Reusable Image Upload Zone Component
@@ -234,14 +235,9 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
                                     onChange={handleMainChange}
                                 >
                                     <option value="" disabled>Select Department</option>
-                                    <option value="Computer Science and Engineering">Computer Science and Engineering</option>
-                                    <option value="Electrical Engineering">Electrical Engineering</option>
-                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
-                                    <option value="Civil Engineering">Civil Engineering</option>
-                                    <option value="Applied Sciences">Applied Sciences</option>
-                                    <option value="Administration">Administration</option>
-                                    <option value="Library">Library</option>
-                                    <option value="Other">Other</option>
+                                    {DEPARTMENTS.map(dept => (
+                                        <option key={dept.value} value={dept.value}>{dept.label}</option>
+                                    ))}
                                 </select>
                                 <span className="bf-select-caret">▾</span>
                             </div>

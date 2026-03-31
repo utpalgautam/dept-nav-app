@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchFloors } from '../services/floorService';
+import { DEPARTMENTS } from '../constants/departments';
 
 const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -210,13 +211,9 @@ const FacultyForm = ({ faculty, buildings = [], onSave, onCancel }) => {
                                 required
                             >
                                 <option value="" disabled>Select Department</option>
-                                <option value="CSE">Computer Science</option>
-                                <option value="ECE">Electronics & Communication</option>
-                                <option value="ME">Mechanical Engineering</option>
-                                <option value="CE">Civil Engineering</option>
-                                <option value="EEE">Electrical & Electronics</option>
-                                <option value="ARCH">Architecture</option>
-                                <option value="IT">Information Technology</option>
+                                {DEPARTMENTS.map(dept => (
+                                    <option key={dept.value} value={dept.value}>{dept.label}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

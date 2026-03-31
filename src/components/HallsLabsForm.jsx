@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaCloudUploadAlt } from 'react-icons/fa';
 import { fetchFloors } from '../services/floorService';
+import { DEPARTMENTS } from '../constants/departments';
 
 const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
     const fileInputRef = useRef(null);
@@ -210,14 +211,18 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                 </div>
                 <div className="hl-form-group">
                     <label>Department</label>
-                    <input
-                        type="text"
+                    <select
                         name="department"
                         className="hl-input-pill"
                         value={formData.department}
                         onChange={handleChange}
-                        placeholder="e.g. Computer Science"
-                    />
+                        required
+                    >
+                        <option value="" disabled>Select Department</option>
+                        {DEPARTMENTS.map(dept => (
+                            <option key={dept.value} value={dept.value}>{dept.label}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
