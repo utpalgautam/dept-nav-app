@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../models/location_model.dart';
+import '../../models/search_log_model.dart';
 import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart' as app_auth;
+import '../navigation/outdoor_navigation_screen.dart';
 
 class RecentSearchesScreen extends StatefulWidget {
   const RecentSearchesScreen({super.key});
@@ -111,6 +115,80 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
        setState(() {
          _recentSearches.clear();
        });
+    }
+  }
+
+  Future<void> _navigateToLocation(LocationModel location) async {
+    final auth = context.read<app_auth.AuthProvider>();
+    if (auth.currentUser != null) {
+        await auth.addRecentSearch(location.id);
+        await _firestoreService.incrementSearchCount(location.id);
+    }
+    
+    if (!mounted) return;
+    
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+    );
+
+    try {
+       if (location.buildingId != null) {
+          final building = await _firestoreService.getBuilding(location.buildingId!);
+          
+          // Log search for analytics
+          if (building != null) {
+            final String platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
+
+            await _firestoreService.logSearch(SearchLogModel(
+              buildingId: building.id,
+              buildingName: building.name,
+              platform: platform,
+              query: location.name,
+              timestamp: DateTime.now(),
+            ));
+          }
+          
+          if (mounted) {
+            Navigator.pop(context); // Close loading dialog
+            if (building != null && building.entryPoints.isNotEmpty) {
+               final entryPoint = building.entryPoints.first; // Default to first entry point
+               await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                     builder: (_) => OutdoorNavigationScreen(
+                        targetBuilding: building,
+                        targetEntryPoint: entryPoint,
+                        destinationId: location.id,
+                        destinationName: location.name,
+                        destLat: entryPoint.latitude,
+                        destLng: entryPoint.longitude,
+                     ),
+                  ),
+               );
+               _loadRecentSearches();
+            } else {
+               ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Building or entry point data not found.')),
+               );
+            }
+          }
+       } else {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Building data not found for this location.')),
+          );
+       }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        debugPrint('Error initiating navigation: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An error occurred while initiating navigation.')),
+        );
+      }
     }
   }
 
@@ -312,6 +390,19 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
             ),
           ),
           const SizedBox(width: 12),
+          // Navigate button (matched with Directory screen design)
+          GestureDetector(
+            onTap: () => _navigateToLocation(location),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.near_me, color: Colors.black, size: 18),
+            ),
+          ),
+          const SizedBox(width: 4),
           // Close button
           GestureDetector(
             onTap: () => _removeSearch(location.id),
