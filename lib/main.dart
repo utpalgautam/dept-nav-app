@@ -26,10 +26,10 @@ void main() async {
   // 1. Check onboarding flag BEFORE anything else.
   final prefs = await SharedPreferences.getInstance();
   
-  // DEV PURPOSES ONLY: Uncomment the line below to reset onboarding locally for testing.
-  // DO NOT commit this line uncommented — onboarding should only show once in production.
+  // DEV/TEST ONLY: This is now commented so that persistence works normally.
+  // We needed it active once to clear the stuck flag on your test device.
   // await prefs.remove(kHasSeenOnboarding);
-  
+
   final hasSeenOnboarding = prefs.getBool(kHasSeenOnboarding) ?? false;
 
   // 2. Init Firebase (non-blocking for the nav decision).
