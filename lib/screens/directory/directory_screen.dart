@@ -399,6 +399,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
               subtitle: hall.typeString,
               department: 'General',
               locationId: hall.locationId,
+              photoUrl: hall.photoUrl,
+              imageBytes: hall.imageBytes,
               fallbackIcon: Icons.meeting_room,
               model: hall,
             );
@@ -446,6 +448,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
               subtitle: 'Laboratory',
               department: lab.department,
               locationId: lab.locationId,
+              photoUrl: lab.photoUrl,
+              imageBytes: lab.imageBytes,
               fallbackIcon: Icons.science,
               model: lab,
             );
@@ -504,7 +508,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white24, width: 1.5),
+                        border: Border.all(color: Colors.white, width: 1.5),
                         color: const Color(0xFF333333),
                       ),
                       child: ClipRRect(
@@ -548,9 +552,15 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                     const SizedBox(width: 12),
                     // Compact Nav Button
                     GestureDetector(
-                      onTap: () => _handleNavigationTap(locationId, context),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _handleNavigationTap(
+                        locationId,
+                        context,
+                        location: location,
+                        building: bSnapshot.data,
+                      ),
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12), // Increased padding for better hit area
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
@@ -568,8 +578,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
-  Future<void> _handleNavigationTap(String locationId, BuildContext context) async {
+  Future<void> _handleNavigationTap(
+    String locationId,
+    BuildContext context, {
+    LocationModel? location,
+    BuildingModel? building,
+  }) async {
     try {
+      if (locationId.isEmpty && location == null) return;
+
+      // Dismiss keyboard to prevent focus issues during navigation
+      FocusScope.of(context).unfocus();
+
       // Show loading indicator
       showDialog(
         context: context,
@@ -577,19 +597,27 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.black)),
       );
 
-      final location = await _firestoreService.getLocation(locationId);
-      if (location != null && location.buildingId != null && mounted) {
-        final building = await _firestoreService.getBuilding(location.buildingId!);
+      // Use pre-fetched context data if available, otherwise fetch from Firestore with a timeout
+      final LocationModel? loc = location ??
+          await _firestoreService
+              .getLocation(locationId)
+              .timeout(const Duration(seconds: 5), onTimeout: () => null);
+
+      if (loc != null && loc.buildingId != null && mounted) {
+        final BuildingModel? bld = building ??
+            await _firestoreService
+                .getBuilding(loc.buildingId!)
+                .timeout(const Duration(seconds: 5), onTimeout: () => null);
 
         // Log search for analytics
-        if (building != null) {
+        if (bld != null) {
           final String platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
 
-          await _firestoreService.logSearch(SearchLogModel(
-            buildingId: building.id,
-            buildingName: building.name,
+          _firestoreService.logSearch(SearchLogModel(
+            buildingId: bld.id,
+            buildingName: bld.name,
             platform: platform,
-            query: location.name,
+            query: loc.name,
             timestamp: DateTime.now(),
           ));
           
@@ -603,16 +631,16 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
         if (mounted) {
           Navigator.pop(context); // Close loading dialog
-          if (building != null && building.entryPoints.isNotEmpty) {
-            final entryPoint = building.entryPoints.first;
+          if (bld != null && bld.entryPoints.isNotEmpty) {
+            final entryPoint = bld.entryPoints.first;
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => OutdoorNavigationScreen(
-                  targetBuilding: building,
+                  targetBuilding: bld,
                   targetEntryPoint: entryPoint,
-                  destinationId: location.id,
-                  destinationName: location.name,
+                  destinationId: loc.id,
+                  destinationName: loc.name,
                   destLat: entryPoint.latitude,
                   destLng: entryPoint.longitude,
                 ),
@@ -628,7 +656,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         if (mounted) {
           Navigator.pop(context); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location data not found.')),
+            const SnackBar(content: Text('Location data not found or took too long.')),
           );
         }
       }
