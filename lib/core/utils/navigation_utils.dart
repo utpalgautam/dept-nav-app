@@ -173,6 +173,24 @@ class NavigationUtils {
       ]
     };
   }
+
+  /// Formats a distance in meters into a human-readable string based on the chosen metric.
+  static String formatDistance(double meters, String metric) {
+    metric = metric.toLowerCase();
+    
+    if (metric == 'kilometers') {
+      if (meters < 300) {
+        return '${meters.toStringAsFixed(0)} m';
+      }
+      return '${(meters / 1000).toStringAsFixed(2)} km';
+    } else if (metric == 'feet') {
+      double feet = meters * 3.28084;
+      return '${feet.toStringAsFixed(0)} ft';
+    } else {
+      // Default or 'meters' or anything unknown
+      return '${meters.toStringAsFixed(0)} m';
+    }
+  }
 }
 
 /// A specialized Kalman Filter for Latitude/Longitude smoothing.

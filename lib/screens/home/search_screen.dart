@@ -53,12 +53,19 @@ class _SearchScreenState extends State<SearchScreen> {
       final auth = context.read<app_auth.AuthProvider>();
       final recentIds = auth.currentUser?.recentSearches ?? [];
       
-      final recent = await _firestoreService.getLocationsByIds(recentIds.reversed.toList());
+      final recentLocations = await _firestoreService.getLocationsByIds(recentIds);
+      
+      // Preserve order: newest first (index 0)
+      final List<LocationModel> sortedRecent = [];
+      for (final id in recentIds) {
+        final loc = recentLocations.where((l) => l.id == id).firstOrNull;
+        if (loc != null) sortedRecent.add(loc);
+      }
 
       if (mounted) {
         setState(() {
           _suggestedPlaces = popular;
-          _recentSearches = recent;
+          _recentSearches = sortedRecent;
           _isLoading = false;
         });
       }
@@ -95,8 +102,17 @@ class _SearchScreenState extends State<SearchScreen> {
     // Navigate or pass data back
     final auth = context.read<app_auth.AuthProvider>();
     if (auth.currentUser != null) {
-        await _firestoreService.addRecentSearch(auth.currentUser!.uid, location.id);
+        await auth.addRecentSearch(location.id);
         await _firestoreService.incrementSearchCount(location.id);
+        
+        // Update local list for instant feedback
+        setState(() {
+          _recentSearches.removeWhere((l) => l.id == location.id);
+          _recentSearches.insert(0, location);
+          if (_recentSearches.length > 8) {
+            _recentSearches = _recentSearches.sublist(0, 8);
+          }
+        });
     }
     
     if (!mounted) return;
