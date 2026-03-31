@@ -405,7 +405,7 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
               height: 56,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white24, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.5),
                 color: const Color(0xFF333333),
               ),
               child: ClipRRect(
