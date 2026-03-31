@@ -659,6 +659,55 @@ class NavigationProvider extends ChangeNotifier {
     if (_currentPosition == null || _destination == null) return;
 
     final start = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+
+    // If we have a target building with multiple entry points, find the nearest by route distance.
+    if (_targetBuilding != null && _targetBuilding!.entryPoints.isNotEmpty) {
+      NavigationRoute? bestRoute;
+      EntryPoint? bestEntryPoint;
+      double minDistance = double.infinity;
+
+      final futures = _targetBuilding!.entryPoints.map((ep) async {
+        final end = LatLng(ep.latitude, ep.longitude);
+        try {
+          final route = await _graphHopperService.getRoute(start, end);
+          return {'route': route, 'entryPoint': ep};
+        } catch (e) {
+          return null;
+        }
+      });
+
+      final results = await Future.wait(futures);
+
+      for (var res in results) {
+        if (res != null && res['route'] != null) {
+          final r = res['route'] as NavigationRoute;
+          final ep = res['entryPoint'] as EntryPoint;
+          if (r.distance < minDistance) {
+            minDistance = r.distance;
+            bestRoute = r;
+            bestEntryPoint = ep;
+          }
+        }
+      }
+
+      if (bestRoute != null && bestEntryPoint != null) {
+        _currentRoute = bestRoute;
+        _targetEntryPoint = bestEntryPoint;
+        _destination = NavigationPoint(lat: bestEntryPoint.latitude, lng: bestEntryPoint.longitude);
+
+        _currentInstructionIndex = 0;
+        if (_currentRoute!.instructions.isNotEmpty) {
+          _currentInstruction = _currentRoute!.instructions.first.text;
+        }
+        _distanceToDestination = _currentRoute!.distance;
+        _remainingRouteCoordinates = List.from(_currentRoute!.coordinates);
+        _distanceToNextStep = _currentRoute!.instructions.length > 1
+            ? _currentRoute!.instructions[1].distance
+            : null;
+        return;
+      }
+    }
+
     final end = LatLng(_destination!.lat, _destination!.lng);
     
     try {
