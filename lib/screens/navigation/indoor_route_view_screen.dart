@@ -55,10 +55,71 @@ class _IndoorRouteViewScreenState extends State<IndoorRouteViewScreen> {
     _loadDataAndComputeRoute();
   }
 
+  double _getPathDistance(IndoorGraph graph, List<GraphNode> path) {
+    if (path.isEmpty) return double.infinity;
+    double totalWeight = 0.0;
+    for (int i = 0; i < path.length - 1; i++) {
+      final nodeA = path[i];
+      final nodeB = path[i + 1];
+      try {
+        final edge = graph.edges.firstWhere((e) =>
+            (e.from == nodeA.id && e.to == nodeB.id) ||
+            (e.from == nodeB.id && e.to == nodeA.id));
+        totalWeight += edge.weight;
+      } catch (_) {
+        totalWeight += math.sqrt(math.pow(nodeA.x - nodeB.x, 2) + math.pow(nodeA.y - nodeB.y, 2));
+      }
+    }
+    return totalWeight;
+  }
+
   Future<void> _loadDataAndComputeRoute() async {
     try {
-      final path = AStarService.findPath(
+      List<GraphNode> path = AStarService.findPath(
           widget.graph, widget.startNode.id, widget.endNode.id);
+
+      if (path.isEmpty) {
+        bool isMultiFloor = !widget.graph.nodes.any((n) => n.id == widget.endNode.id);
+        if (isMultiFloor) {
+          int? targetFloor;
+          IndoorGraph? targetGraph;
+          
+          for (int i = 0; i < widget.buildingModel.totalFloors; i++) {
+            if (i == widget.floorNo) continue;
+            try {
+              final g = await _firestoreService.getIndoorGraph(widget.buildingModel.id, i);
+              if (g != null && g.nodes.any((n) => n.id == widget.endNode.id)) {
+                 targetFloor = i;
+                 targetGraph = g;
+                 break;
+              }
+            } catch (_) {}
+          }
+          
+          if (targetGraph != null) {
+            final stairNodes = widget.graph.nodes.where((n) => n.type.toLowerCase() == 'stairs').toList();
+            double minTotalDistance = double.infinity;
+            
+            for (var stair in stairNodes) {
+               final path1 = AStarService.findPath(widget.graph, widget.startNode.id, stair.id);
+               if (path1.isNotEmpty) {
+                  double dist1 = _getPathDistance(widget.graph, path1);
+                  double dist2 = double.infinity;
+                  
+                  final path2 = AStarService.findPath(targetGraph, stair.label, widget.endNode.id);
+                  if (path2.isNotEmpty) {
+                      dist2 = _getPathDistance(targetGraph, path2);
+                  }
+                  
+                  if (dist1 + dist2 < minTotalDistance) {
+                      minTotalDistance = dist1 + dist2;
+                      path = path1;
+                  }
+               }
+            }
+          }
+        }
+      }
 
       if (path.isEmpty) {
         if (mounted) {
