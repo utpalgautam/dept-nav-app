@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 enum HallType { lectureHall, seminarHall, auditorium, conferenceRoom }
 
 /// Hall model. Physical location details (building, floor, room) are
@@ -13,6 +16,12 @@ class HallModel {
   final String? contactPerson;
   final String department;
 
+  /// Legacy HTTP photo URL (may be null).
+  final String? photoUrl;
+
+  /// Base64-encoded image stored directly in Firestore as `imageUrl`.
+  final String? imageUrl;
+
   HallModel({
     required this.id,
     required this.name,
@@ -20,7 +29,20 @@ class HallModel {
     required this.locationId,
     this.contactPerson,
     this.department = 'General',
+    this.photoUrl,
+    this.imageUrl,
   });
+
+  /// Decodes [imageUrl] (base64) into raw bytes for display with [Image.memory].
+  Uint8List? get imageBytes {
+    if (imageUrl == null || imageUrl!.isEmpty) return null;
+    try {
+      final raw = imageUrl!.contains(',') ? imageUrl!.split(',').last : imageUrl!;
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
 
   factory HallModel.fromFirestore(Map<String, dynamic> data, String id) =>
       HallModel(
@@ -30,6 +52,8 @@ class HallModel {
         locationId: data['locationId'] ?? '',
         contactPerson: data['contactPerson'] as String?,
         department: data['department'] ?? 'General',
+        photoUrl: data['photoUrl'] as String?,
+        imageUrl: data['imageUrl'] as String?,
       );
 
   static HallType _parseHallType(String? type) {
@@ -55,5 +79,8 @@ class HallModel {
         'type': type.toString().split('.').last,
         'locationId': locationId,
         if (contactPerson != null) 'contactPerson': contactPerson,
+        'department': department,
+        if (photoUrl != null) 'photoUrl': photoUrl,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       };
 }

@@ -100,7 +100,7 @@ class _DirectoryDetailsScreenState extends State<DirectoryDetailsScreen> {
   }
 
   String get _imageTitle {
-    if (widget.model is FacultyModel) return 'Faculty Profile';
+    if (widget.model is FacultyModel) return 'Faculty Details';
     if (widget.model is LabModel) return 'Lab Details';
     if (widget.model is HallModel) return 'Hall Details';
     return 'Details';
@@ -108,11 +108,15 @@ class _DirectoryDetailsScreenState extends State<DirectoryDetailsScreen> {
 
   Uint8List? get _imageBytes {
     if (widget.model is FacultyModel) return (widget.model as FacultyModel).imageBytes;
+    if (widget.model is LabModel) return (widget.model as LabModel).imageBytes;
+    if (widget.model is HallModel) return (widget.model as HallModel).imageBytes;
     return null;
   }
 
   String? get _photoUrl {
     if (widget.model is FacultyModel) return (widget.model as FacultyModel).photoUrl;
+    if (widget.model is LabModel) return (widget.model as LabModel).photoUrl;
+    if (widget.model is HallModel) return (widget.model as HallModel).photoUrl;
     return null;
   }
 
@@ -318,7 +322,7 @@ class _DirectoryDetailsScreenState extends State<DirectoryDetailsScreen> {
 
                   // Conditional Email (Hidden for Halls)
                   if (widget.model is! HallModel) ...[
-                    _buildInfoCapsule('Incharge Email', _email, capsulePadding),
+                    _buildInfoCapsule(widget.model is LabModel ? 'Incharge Email' : 'Email', _email, capsulePadding),
                     SizedBox(height: availableHeight < 650 ? 8 : 12),
                   ],
                   Row(
@@ -326,7 +330,7 @@ class _DirectoryDetailsScreenState extends State<DirectoryDetailsScreen> {
                       Expanded(
                         flex: 3,
                         child: _buildInfoCapsule(
-                          'Cabin',
+                          (widget.model is HallModel || widget.model is LabModel) ? 'Room No.' : 'Cabin',
                           _location?.roomNumber ?? (_isLoadingLocation ? '...' : 'N/A'),
                           capsulePadding,
                         ),
