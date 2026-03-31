@@ -10,6 +10,7 @@ import '../directory/directory_screen.dart';
 import '../map/offline_maps_screen.dart';
 import '../map/explore_map_screen.dart';
 import '../../widgets/bottom_nav_bar.dart';
+import '../../widgets/animated_rainbow_border.dart';
 import '../../main.dart' show AuthWrapper;
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -269,35 +270,32 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: const Row(
-          children: [
-            SizedBox(width: 18),
-            Icon(Icons.search, color: Color(0xFF888888), size: 22),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Search cabins, halls, labs...',
-                style: TextStyle(
-                  color: Color(0xFFAAAAAA),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
+      child: AnimatedRainbowBorder(
+        borderRadius: 30.0,
+        borderWidth: 2.5,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(27.5),
+          ),
+          child: const Row(
+            children: [
+              SizedBox(width: 18),
+              Icon(Icons.search, color: Colors.white70, size: 22),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Search cabins, halls, labs...',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(width: 18),
-          ],
+              SizedBox(width: 18),
+            ],
+          ),
         ),
       ),
     );
