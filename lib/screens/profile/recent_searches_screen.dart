@@ -274,68 +274,36 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
   }
 
   Widget _buildSearchesList() {
-    // Split into today and yesterday for the UI mockup
-    final List<LocationModel> todaySearches = [];
-    final List<LocationModel> yesterdaySearches = [];
-    
-    for (int i = 0; i < _recentSearches.length; i++) {
-        if (i < 3) {
-            todaySearches.add(_recentSearches[i]);
-        } else {
-            yesterdaySearches.add(_recentSearches[i]);
-        }
-    }
-
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
-        // TODAY Header
-        if (todaySearches.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'TODAY',
-                style: TextStyle(
-                  color: Color(0xFF888888),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'RECENT SEARCHES',
+              style: TextStyle(
+                color: Color(0xFF888888),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
               ),
-              GestureDetector(
-                onTap: _clearAll,
-                child: const Text(
-                  'Clear all',
-                  style: TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...todaySearches.map((loc) => _buildCard(loc)),
-        ],
-
-        // YESTERDAY Header
-        if (yesterdaySearches.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          const Text(
-            'YESTERDAY',
-            style: TextStyle(
-              color: Color(0xFF888888),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
             ),
-          ),
-          const SizedBox(height: 16),
-          ...yesterdaySearches.map((loc) => _buildCard(loc)),
-        ],
-        
+            GestureDetector(
+              onTap: _clearAll,
+              child: const Text(
+                'Clear all',
+                style: TextStyle(
+                  color: Color(0xFF666666),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ..._recentSearches.map((loc) => _buildCard(loc)),
         const SizedBox(height: 48), // Bottom padding
       ],
     );
@@ -347,18 +315,11 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
     if (buildingName.isEmpty) buildingName = 'IT Complex';
     
     final model = _locationModels[location.id];
-    String subtitle = location.roomNumber != null ? '${location.roomNumber} - $buildingName' : buildingName;
     
-    // If we have a sub-text for different types
-    if (model != null) {
-      if (model is FacultyModel) {
-        subtitle = model.role.isNotEmpty ? model.role : model.designation;
-      } else if (model is HallModel) {
-        subtitle = model.typeString;
-      } else if (model is LabModel) {
-        subtitle = 'Laboratory';
-      }
-    }
+    // Prioritize room number in the subtitle as requested
+    String subtitle = (location.roomNumber != null && location.roomNumber!.isNotEmpty) 
+        ? 'Room ${location.roomNumber}' 
+        : buildingName;
 
     // Icon fallback / Image bytes
     dynamic imageToDisplay;
@@ -405,7 +366,7 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
               height: 56,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white24, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.5),
                 color: const Color(0xFF333333),
               ),
               child: ClipRRect(

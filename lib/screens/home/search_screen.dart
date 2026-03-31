@@ -11,6 +11,9 @@ import '../../models/search_log_model.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 import '../home/home_screen.dart';
 import '../navigation/outdoor_navigation_screen.dart';
+import '../../models/faculty_model.dart';
+import '../../models/hall_model.dart';
+import '../../models/lab_model.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -26,6 +29,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<LocationModel> _suggestedPlaces = [];
   List<LocationModel> _recentSearches = [];
   List<LocationModel> _searchResults = [];
+  Map<String, dynamic> _locationModels = {};
   
   bool _isSearching = false;
   bool _isLoading = true;
@@ -62,10 +66,23 @@ class _SearchScreenState extends State<SearchScreen> {
         if (loc != null) sortedRecent.add(loc);
       }
 
+      // Fetch building names and specific models for each recent search
+      final Map<String, dynamic> locModels = {};
+      for (final loc in sortedRecent) {
+        if (loc.type == LocationType.faculty) {
+          locModels[loc.id] = await _firestoreService.getFacultyByLocationId(loc.id);
+        } else if (loc.type == LocationType.hall) {
+          locModels[loc.id] = await _firestoreService.getHallByLocationId(loc.id);
+        } else if (loc.type == LocationType.lab) {
+          locModels[loc.id] = await _firestoreService.getLabByLocationId(loc.id);
+        }
+      }
+
       if (mounted) {
         setState(() {
           _suggestedPlaces = popular;
           _recentSearches = sortedRecent;
+          _locationModels = locModels;
           _isLoading = false;
         });
       }
@@ -481,19 +498,50 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildRecentCard(LocationModel location) {
+    final model = _locationModels[location.id];
+    
+    // Prioritize room number in the subtitle as requested
+    String subtitle = (location.roomNumber != null && location.roomNumber!.isNotEmpty) 
+        ? 'Room ${location.roomNumber}' 
+        : (location.buildingId != null ? 'In Building' : 'Nearby');
+
+    dynamic imageToDisplay;
+    IconData fallbackIcon = Icons.location_on;
+    if (model != null) {
+      if (model is FacultyModel) {
+        imageToDisplay = model.imageBytes ?? model.photoUrl;
+        fallbackIcon = Icons.person;
+      } else if (model is HallModel) fallbackIcon = Icons.meeting_room;
+      else if (model is LabModel) fallbackIcon = Icons.science;
+    }
+
     return GestureDetector(
       onTap: () => _onLocationSelected(location),
       child: Container(
-        color: Colors.transparent, // for tap area
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B1B1C),
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white, width: 1.5),
+                color: const Color(0xFF333333),
               ),
-              child: const Icon(Icons.history, color: Color(0xFF888888), size: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imageToDisplay != null
+                    ? (imageToDisplay is Uint8List
+                        ? Image.memory(imageToDisplay, fit: BoxFit.cover)
+                        : Image.network(imageToDisplay as String, fit: BoxFit.cover))
+                    : Icon(fallbackIcon, color: Colors.white38, size: 28),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -502,24 +550,29 @@ class _SearchScreenState extends State<SearchScreen> {
                 children: [
                   Text(
                     location.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.black,
+                      color: Colors.white,
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    location.buildingId != null ? 'In Building' : 'Nearby',
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF999999),
+                      color: Color(0xFF909090),
                       fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.north_east, color: Color(0xFFAAAAAA), size: 20),
+            const SizedBox(width: 8),
+            const Icon(Icons.north_east, color: Colors.white24, size: 20),
           ],
         ),
       ),
