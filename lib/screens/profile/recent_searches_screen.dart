@@ -316,21 +316,10 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
     
     final model = _locationModels[location.id];
     
-    // Decide on subtitle with room number
-    String roomNo = location.roomNumber != null ? 'Room ${location.roomNumber}' : '';
-    String sub = buildingName;
-    
-    if (model != null) {
-      if (model is FacultyModel) {
-        sub = model.role.isNotEmpty ? model.role : model.designation;
-      } else if (model is HallModel) {
-        sub = model.typeString;
-      } else if (model is LabModel) {
-        sub = 'Laboratory';
-      }
-    }
-    
-    String subtitle = roomNo.isNotEmpty ? '$sub • $roomNo' : sub;
+    // Prioritize room number in the subtitle as requested
+    String subtitle = (location.roomNumber != null && location.roomNumber!.isNotEmpty) 
+        ? 'Room ${location.roomNumber}' 
+        : buildingName;
 
     // Icon fallback / Image bytes
     dynamic imageToDisplay;
