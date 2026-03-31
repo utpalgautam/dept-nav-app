@@ -232,8 +232,13 @@ class AuthService {
             'lastLogin': Timestamp.fromDate(now),
           });
         } else {
-          // Explicitly sign out of Firebase and Google so no ghost session remains
-          await _auth.signOut();
+          // No Firestore doc found. Delete ghost Firebase account so they can register cleanly.
+          final bool hasPassword = user.providerData.any((p) => p.providerId == 'password');
+          if (!hasPassword) {
+            await user.delete();
+          } else {
+            await _auth.signOut();
+          }
           await GoogleSignIn().signOut();
           throw 'No account found with this Google account. Please sign up first.';
         }
