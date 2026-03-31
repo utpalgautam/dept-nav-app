@@ -177,6 +177,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // ── Preferences Management ────────────────────────────────────────────────
+  Future<bool> updatePreferences(Map<String, dynamic> preferences) async {
+    if (_currentUser == null) return false;
+    _setLoading(true);
+    _clearError();
+    try {
+      await _authService.updatePreferences(preferences);
+      _currentUser = _currentUser!.copyWith(preferences: preferences);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ── Password Management ───────────────────────────────────────────────────
   Future<bool> resetPassword({required String email}) async {
     _setLoading(true);

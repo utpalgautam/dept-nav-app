@@ -4,6 +4,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../providers/navigation_provider.dart';
+import '../../providers/auth_provider.dart' as app_auth;
 import '../../models/building_model.dart';
 import '../../core/constants/app_constants.dart';
 import 'widgets/turn_by_turn_widget.dart';
@@ -722,6 +723,8 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   @override
   Widget build(BuildContext context) {
     const bool showCompass = true;
+    final auth = context.watch<app_auth.AuthProvider>();
+    final metric = auth.currentUser?.preferences['distanceMetric'] ?? 'Meters';
 
     return Consumer<NavigationProvider>(
       builder: (context, navProvider, child) {
@@ -742,8 +745,8 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                       .inMinutes
                   : 0;
               final route = navProvider.currentRoute;
-              final distKm = route != null
-                  ? route.distance / 1000.0
+              final distMeters = route != null
+                  ? route.distance
                   : 0.0;
               navProvider.stopNavigation();
               Navigator.pushReplacement(
@@ -758,7 +761,8 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                         : null,
                     buildingName: widget.targetBuilding?.name,
                     timeTakenMinutes: elapsed,
-                    distanceKm: distKm,
+                    distanceMeters: distMeters,
+                    distanceMetric: metric,
                     isIndoorOnly: false,
                   ),
                 ),
@@ -822,9 +826,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                       instruction: navProvider.currentInstruction ??
                           'Head to destination',
                       distance: navProvider.distanceToNextStep != null
-                          ? (navProvider.distanceToNextStep! < 1000
-                              ? 'In ${navProvider.distanceToNextStep!.toStringAsFixed(0)} m'
-                              : 'In ${(navProvider.distanceToNextStep! / 1000).toStringAsFixed(1)} km')
+                          ? 'In ${NavigationUtils.formatDistance(navProvider.distanceToNextStep!, metric)}'
                           : '...',
                       sign: navProvider.currentSign,
                       nextInstruction: navProvider.nextInstruction,
@@ -947,9 +949,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                         ? (navProvider.currentInstruction ?? 'Follow the route')
                         : (widget.targetBuilding?.name ?? 'Head to Entrance'),
                     distance: navProvider.distanceToDestination != null
-                        ? (navProvider.distanceToDestination! < 1000
-                            ? '${navProvider.distanceToDestination!.toStringAsFixed(0)} m'
-                            : '${(navProvider.distanceToDestination! / 1000).toStringAsFixed(1)} km')
+                        ? NavigationUtils.formatDistance(navProvider.distanceToDestination!, metric)
                         : '...',
                     time: navProvider.remainingTime != null
                         ? '${navProvider.remainingTime} min'

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../main.dart' show AuthWrapper;
+import '../../core/utils/navigation_utils.dart';
 
 /// Full-screen arrival confirmation screen, pixel-matched to the design image.
 /// Shown after completing outdoor-only navigation (50 XP) or indoor-only (25 XP).
@@ -12,7 +13,8 @@ class NavigationCompletionScreen extends StatefulWidget {
   final String? floor;
   final String? buildingName;
   final int timeTakenMinutes;
-  final double distanceKm;
+  final double distanceMeters;
+  final String distanceMetric;
 
   /// true → indoor-only completion (25 XP), false → full outdoor+indoor or outdoor-only (50 XP)
   final bool isIndoorOnly;
@@ -24,7 +26,8 @@ class NavigationCompletionScreen extends StatefulWidget {
     this.floor,
     this.buildingName,
     required this.timeTakenMinutes,
-    required this.distanceKm,
+    required this.distanceMeters,
+    this.distanceMetric = 'Kilometers',
     this.isIndoorOnly = false,
   });
 
@@ -42,7 +45,7 @@ class _NavigationCompletionScreenState
   late final Animation<double> _cardFade;
 
   int get _xp => widget.isIndoorOnly ? 25 : 50;
-  int get _steps => (widget.distanceKm * 1312).round();
+  int get _steps => (widget.distanceMeters * 1.312).round();
 
   String get _arrivalSubtitle {
     final parts = <String>[widget.destinationName];
@@ -221,7 +224,7 @@ class _NavigationCompletionScreenState
                                 children: [
                                   Expanded(child: _SummaryTile(label: 'Time taken', value: widget.timeTakenMinutes.toString(), unit: 'MINS')),
                                   const SizedBox(width: 10),
-                                  Expanded(child: _SummaryTile(label: 'Distance', value: widget.distanceKm.toStringAsFixed(1), unit: 'KM')),
+                                  Expanded(child: _SummaryTile(label: 'Distance', value: NavigationUtils.formatDistance(widget.distanceMeters, widget.distanceMetric).split(' ')[0], unit: NavigationUtils.formatDistance(widget.distanceMeters, widget.distanceMetric).split(' ').sublist(1).join(' ').toUpperCase())),
                                 ],
                               ),
                             ),

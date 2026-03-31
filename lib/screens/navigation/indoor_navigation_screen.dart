@@ -7,6 +7,7 @@ import '../../services/firestore_service.dart';
 import '../../services/astar_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/navigation_provider.dart';
+import '../../providers/auth_provider.dart' as app_auth;
 import 'floor_transition_screen.dart';
 import 'navigation_completion_screen.dart';
 
@@ -252,7 +253,10 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
   void _showArrivalDialog() {
     _navStopwatch.stop();
     final int elapsedMinutes = _navStopwatch.elapsed.inMinutes;
-    final double distKm = _routeDistanceMeters / 1000.0;
+    final double distMeters = _routeDistanceMeters.toDouble();
+    final auth = context.read<app_auth.AuthProvider>();
+    final metric = auth.currentUser?.preferences['distanceMetric'] ?? 'Kilometers';
+    
     Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
     Navigator.pushReplacement(
       context,
@@ -268,7 +272,8 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                   : null),
           buildingName: widget.buildingName,
           timeTakenMinutes: elapsedMinutes,
-          distanceKm: distKm,
+          distanceMeters: distMeters,
+          distanceMetric: metric,
           isIndoorOnly: true,
         ),
       ),
