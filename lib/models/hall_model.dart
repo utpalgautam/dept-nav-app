@@ -11,6 +11,7 @@ class HallModel {
   final String locationId;
 
   final String? contactPerson;
+  final String department;
 
   HallModel({
     required this.id,
@@ -18,6 +19,7 @@ class HallModel {
     required this.type,
     required this.locationId,
     this.contactPerson,
+    this.department = 'General',
   });
 
   factory HallModel.fromFirestore(Map<String, dynamic> data, String id) =>
@@ -27,6 +29,7 @@ class HallModel {
         type: _parseHallType(data['type']),
         locationId: data['locationId'] ?? '',
         contactPerson: data['contactPerson'] as String?,
+        department: data['department'] ?? 'General',
       );
 
   static HallType _parseHallType(String? type) {

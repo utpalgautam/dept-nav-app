@@ -8,6 +8,7 @@ import '../../services/astar_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/navigation_provider.dart';
 import 'floor_transition_screen.dart';
+import 'navigation_completion_screen.dart';
 
 class IndoorNavigationScreen extends StatefulWidget {
   final String buildingId;
@@ -15,6 +16,9 @@ class IndoorNavigationScreen extends StatefulWidget {
   final int floor;
   final String entryPointId;
   final String? destinationLocationId;
+  final int? targetFloor;
+  final String? destinationNodeId;
+  final String? destinationNodeLabel;
 
   const IndoorNavigationScreen({
     super.key,
@@ -23,6 +27,9 @@ class IndoorNavigationScreen extends StatefulWidget {
     required this.floor,
     required this.entryPointId,
     this.destinationLocationId,
+    this.targetFloor,
+    this.destinationNodeId,
+    this.destinationNodeLabel,
   });
 
   @override
@@ -44,6 +51,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   bool _isNavigatingToStairs = false;
   final bool _isDebugMode = false;
+  final Stopwatch _navStopwatch = Stopwatch();
 
   // View toggles
   bool _is3DMode = true;
@@ -64,6 +72,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
   void initState() {
     super.initState();
     _currentFloor = widget.floor;
+    _navStopwatch.start();
     _loadNavigationData();
   }
 
@@ -85,6 +94,11 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       if (widget.destinationLocationId != null) {
         _destination =
             await _firestoreService.getLocation(widget.destinationLocationId!);
+      } else if (widget.destinationNodeId == null) {
+        _errorMessage = 'No destination specified.';
+        _currentInstruction = _errorMessage!;
+        setState(() => _isLoading = false);
+        return;
       }
 
       _currentFloorData =
@@ -119,7 +133,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
   Future<void> _calculateRoute() async {
     _currentPath = [];
-    if (_destination == null) {
+    if (_destination == null && widget.destinationNodeId == null) {
       _currentInstruction = 'Destination not found.';
       return;
     }
@@ -129,10 +143,11 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       return;
     }
 
-    final int targetFloor = _destination?.floor ?? 0;
+    final int targetFloor = widget.targetFloor ?? _destination?.floor ?? 0;
     final IndoorGraph graph = _currentGraph!;
     final String entryLabel = widget.entryPointId;
-    final String roomLabel = _destination!.roomNumber ?? _destination!.name;
+    final String roomLabel = widget.destinationNodeId ?? (_destination?.roomNumber ?? _destination?.name ?? "Destination");
+    final String displayRoomLabel = widget.destinationNodeLabel ?? (_destination?.name ?? _destination?.roomNumber ?? "Destination");
 
     if (_currentFloor != targetFloor) {
       _isNavigatingToStairs = true;
@@ -162,9 +177,9 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       }
 
       if (_currentPath.isEmpty) {
-        _currentInstruction = 'Route to $roomLabel not found.';
+        _currentInstruction = 'Route to $displayRoomLabel not found.';
       } else {
-        _currentInstruction = 'Follow the route to $roomLabel';
+        _currentInstruction = 'Follow the route to $displayRoomLabel';
       }
     }
 
@@ -207,38 +222,55 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
       MaterialPageRoute(
         builder: (context) => FloorTransitionScreen(
           currentFloor: _currentFloor,
-          targetFloor: _destination?.floor ?? 0,
+          targetFloor: widget.targetFloor ?? _destination?.floor ?? 0,
           subInstruction: _currentInstruction.contains('Stairs') ? 'Straight 50m' : _currentInstruction,
           onConfirm: () {
-            _switchFloor(_destination?.floor ?? 0);
+            _switchFloor(widget.targetFloor ?? _destination?.floor ?? 0);
           },
         ),
       ),
     );
   }
 
+  String _floorLabel(int floor) {
+    switch (floor) {
+      case 0:
+        return 'Ground Floor';
+      case 1:
+        return 'First Floor';
+      case 2:
+        return 'Second Floor';
+      case 3:
+        return 'Third Floor';
+      case 4:
+        return 'Fourth Floor';
+      default:
+        return 'Floor $floor';
+    }
+  }
+
   void _showArrivalDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Destination Reached',
-            style: TextStyle(color: Colors.white)),
-        content: Text('You have arrived at ${_destination?.name}.',
-            style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Provider.of<NavigationProvider>(context, listen: false)
-                  .stopNavigation();
-              Navigator.pop(context); // close dialog
-              Navigator.pop(context); // close nav screen
-            },
-            child: const Text('Finish', style: TextStyle(color: Colors.blue)),
-          )
-        ],
+    _navStopwatch.stop();
+    final int elapsedMinutes = _navStopwatch.elapsed.inMinutes;
+    final double distKm = _routeDistanceMeters / 1000.0;
+    Provider.of<NavigationProvider>(context, listen: false).stopNavigation();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NavigationCompletionScreen(
+          destinationName:
+              widget.destinationNodeLabel ?? _destination?.name ?? 'Destination',
+          roomNumber: _destination?.roomNumber,
+          floor: _destination?.floor != null
+              ? _floorLabel(_destination!.floor!)
+              : (widget.targetFloor != null
+                  ? _floorLabel(widget.targetFloor!)
+                  : null),
+          buildingName: widget.buildingName,
+          timeTakenMinutes: elapsedMinutes,
+          distanceKm: distKm,
+          isIndoorOnly: true,
+        ),
       ),
     );
   }

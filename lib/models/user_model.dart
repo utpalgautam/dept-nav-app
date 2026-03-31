@@ -15,6 +15,7 @@ class UserModel {
   final List<String> savedLocations;
   final List<String> recentSearches;
   final Map<String, dynamic> preferences;
+  final int points;
 
   UserModel({
     required this.uid,
@@ -29,6 +30,7 @@ class UserModel {
     this.savedLocations = const [],
     this.recentSearches = const [],
     this.preferences = const {},
+    this.points = 0,
   });
 
   // Convert from Firestore document
@@ -46,6 +48,7 @@ class UserModel {
       savedLocations: List<String>.from(data['savedLocations'] ?? []),
       recentSearches: List<String>.from(data['recentSearches'] ?? []),
       preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
+      points: (data['points'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -63,6 +66,7 @@ class UserModel {
       'savedLocations': savedLocations,
       'recentSearches': recentSearches,
       'preferences': preferences,
+      'points': points,
     };
   }
 
@@ -105,6 +109,7 @@ class UserModel {
     List<String>? savedLocations,
     List<String>? recentSearches,
     Map<String, dynamic>? preferences,
+    int? points,
   }) {
     return UserModel(
       uid: uid,
@@ -119,6 +124,7 @@ class UserModel {
       savedLocations: savedLocations ?? this.savedLocations,
       recentSearches: recentSearches ?? this.recentSearches,
       preferences: preferences ?? this.preferences,
+      points: points ?? this.points,
     );
   }
 }
