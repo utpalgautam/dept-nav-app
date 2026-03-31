@@ -250,6 +250,30 @@ class FirestoreService {
     });
   }
 
+  Future<FacultyModel?> getFacultyByLocationId(String locationId) async {
+    final query = await _faculties.where('locationId', isEqualTo: locationId).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return FacultyModel.fromFirestore(query.docs.first.data() as Map<String, dynamic>, query.docs.first.id);
+    }
+    return null;
+  }
+
+  Future<HallModel?> getHallByLocationId(String locationId) async {
+    final query = await _halls.where('locationId', isEqualTo: locationId).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return HallModel.fromFirestore(query.docs.first.data() as Map<String, dynamic>, query.docs.first.id);
+    }
+    return null;
+  }
+
+  Future<LabModel?> getLabByLocationId(String locationId) async {
+    final query = await _labs.where('locationId', isEqualTo: locationId).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return LabModel.fromFirestore(query.docs.first.data() as Map<String, dynamic>, query.docs.first.id);
+    }
+    return null;
+  }
+
   // ========== SEARCH OPERATIONS ==========
 
   Future<LocationModel?> getLocation(String id) async {
