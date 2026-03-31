@@ -46,6 +46,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
   IndoorGraph? _currentGraph;
   List<GraphNode> _currentPath = [];
   LocationModel? _destination;
+  String? _transitionStairId;
 
   String _currentInstruction = 'Loading route...';
   String? _errorMessage;
@@ -132,6 +133,24 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
     }
   }
 
+  double _getPathDistance(IndoorGraph graph, List<GraphNode> path) {
+    if (path.isEmpty) return double.infinity;
+    double totalWeight = 0.0;
+    for (int i = 0; i < path.length - 1; i++) {
+      final nodeA = path[i];
+      final nodeB = path[i + 1];
+      try {
+        final edge = graph.edges.firstWhere((e) =>
+            (e.from == nodeA.id && e.to == nodeB.id) ||
+            (e.from == nodeB.id && e.to == nodeA.id));
+        totalWeight += edge.weight;
+      } catch (_) {
+        totalWeight += math.sqrt(math.pow(nodeA.x - nodeB.x, 2) + math.pow(nodeA.y - nodeB.y, 2));
+      }
+    }
+    return totalWeight;
+  }
+
   Future<void> _calculateRoute() async {
     _currentPath = [];
     if (_destination == null && widget.destinationNodeId == null) {
@@ -146,35 +165,89 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
 
     final int targetFloor = widget.targetFloor ?? _destination?.floor ?? 0;
     final IndoorGraph graph = _currentGraph!;
-    final String entryLabel = widget.entryPointId;
+    
+    // Once the user ascends/descends past their initial floor, the starting point
+    // on the new floor must be the stairs they just transitioned through.
+    final String entryLabel = (_currentFloor == widget.floor)
+        ? widget.entryPointId
+        : (_transitionStairId ?? "Stairs");
+
     final String roomLabel = widget.destinationNodeId ?? (_destination?.roomNumber ?? _destination?.name ?? "Destination");
     final String displayRoomLabel = widget.destinationNodeLabel ?? (_destination?.name ?? _destination?.roomNumber ?? "Destination");
 
     if (_currentFloor != targetFloor) {
       _isNavigatingToStairs = true;
-      _currentPath = AStarService.findPath(graph, entryLabel, "Stairs");
+      final stairNodes = graph.nodes.where((n) => n.type.toLowerCase() == 'stairs').toList();
 
-      if (_currentPath.isEmpty) {
-        _currentPath = AStarService.findPath(graph, "Stairs", "Stairs");
+      if (stairNodes.isEmpty) {
+        _currentPath = AStarService.findPath(graph, entryLabel, "Stairs");
+        _transitionStairId = "Stairs";
+
         if (_currentPath.isEmpty) {
-          _currentInstruction = 'Route to stairs not found.';
+          _currentPath = AStarService.findPath(graph, "Stairs", "Stairs");
+          if (_currentPath.isEmpty) {
+            _currentInstruction = 'Route to stairs not found.';
+          } else {
+            _currentInstruction = 'Route from $entryLabel to stairs not found.';
+          }
         } else {
-          _currentInstruction = 'Route from $entryLabel to stairs not found.';
+          _currentInstruction = 'Follow the route to Stairs';
         }
       } else {
-        _currentInstruction = 'Follow the route to Stairs';
+        IndoorGraph? targetGraph;
+        try {
+          targetGraph = await _firestoreService.getIndoorGraph(widget.buildingId, targetFloor);
+        } catch (e) {
+          debugPrint('Error fetching target graph for optimal stairs: $e');
+        }
+
+        List<GraphNode> bestPath = [];
+        double minTotalDistance = double.infinity;
+        String bestStairLabel = "Stairs";
+
+        for (var stair in stairNodes) {
+          final path1 = AStarService.findPath(graph, entryLabel, stair.id);
+          if (path1.isNotEmpty) {
+            double dist1 = _getPathDistance(graph, path1);
+            double dist2 = 0.0;
+
+            if (targetGraph != null) {
+              final path2 = AStarService.findPath(targetGraph, stair.label, roomLabel);
+              if (path2.isNotEmpty) {
+                dist2 = _getPathDistance(targetGraph, path2);
+              } else {
+                dist2 = double.infinity; // Unreachable from this stair on destination floor
+              }
+            }
+
+            double totalDist = dist1 + dist2;
+
+            if (totalDist < minTotalDistance) {
+              minTotalDistance = totalDist;
+              bestPath = path1;
+              bestStairLabel = stair.label;
+            }
+          }
+        }
+
+        _currentPath = bestPath;
+        _transitionStairId = bestStairLabel;
+
+        if (_currentPath.isEmpty) {
+           _currentInstruction = 'Route to stairs not found.';
+        } else {
+           _currentInstruction = 'Follow the route to Stairs';
+        }
       }
     } else {
       _isNavigatingToStairs = false;
       String startLabel = entryLabel;
-      if (_currentFloor != widget.floor) {
-        startLabel = "Stairs";
-      }
 
       _currentPath = AStarService.findPath(graph, startLabel, roomLabel);
 
-      if (_currentPath.isEmpty && startLabel == "Stairs") {
-        _currentPath = AStarService.findPath(graph, entryLabel, roomLabel);
+      if (_currentPath.isEmpty && startLabel != widget.entryPointId) {
+        // Ultimate fallback to initial point in case graph labels fail entirely
+        _currentPath = AStarService.findPath(graph, widget.entryPointId, roomLabel);
       }
 
       if (_currentPath.isEmpty) {
