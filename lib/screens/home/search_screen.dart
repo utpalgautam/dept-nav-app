@@ -499,17 +499,22 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildRecentCard(LocationModel location) {
     final model = _locationModels[location.id];
-    String subtitle = location.roomNumber != null ? '${location.roomNumber} • Nearby' : 'Nearby';
+    
+    // Decide on subtitle with room number
+    String roomNo = location.roomNumber != null ? 'Room ${location.roomNumber}' : '';
+    String sub = location.buildingId != null ? 'In Building' : 'Nearby';
     
     if (model != null) {
       if (model is FacultyModel) {
-        subtitle = model.role.isNotEmpty ? model.role : model.designation;
+        sub = model.role.isNotEmpty ? model.role : model.designation;
       } else if (model is HallModel) {
-        subtitle = model.typeString;
+        sub = model.typeString;
       } else if (model is LabModel) {
-        subtitle = 'Laboratory';
+        sub = 'Laboratory';
       }
     }
+    
+    String subtitle = roomNo.isNotEmpty ? '$sub • $roomNo' : sub;
 
     dynamic imageToDisplay;
     IconData fallbackIcon = Icons.location_on;
