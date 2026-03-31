@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
 import 'dart:io' show Platform;
 import '../../core/constants/colors.dart';
+import '../../providers/auth_provider.dart' as app_auth;
 import '../../models/building_model.dart';
 import '../../models/faculty_model.dart';
 import '../../models/hall_model.dart';
@@ -92,75 +94,29 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             bottom: false,
             child: CustomScrollView(
               slivers: [
-                // --- Header + Segment Control (scrolls away) ---
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 20),
-
-                        // --- Header (Back btn + Title) ---
-                        Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: const BoxDecoration(
-                                color: Colors.black,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.arrow_back,
-                                    color: Colors.white, size: 20),
-                                onPressed: () {
-                                  if (Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  } else {
-                                    Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const HomeScreen()));
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: Text(
-                                'Directory',
-                                style: TextStyle(
-                                  fontSize: MediaQuery.of(context).size.width * 0.065 > 26 ? 26 : MediaQuery.of(context).size.width * 0.065,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // --- Segmented Control ---
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              _buildSegmentButton(0, 'Faculty'),
-                              _buildSegmentButton(1, 'Halls'),
-                              _buildSegmentButton(2, 'Labs'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+                // --- Header + Segment Control (floating: rolls down on scroll-up) ---
+                SliverPersistentHeader(
+                  floating: true,
+                  pinned: false,
+                  delegate: _DirectoryHeaderDelegate(
+                    selectedSegment: _selectedSegment,
+                    onSegmentChanged: (index) {
+                      setState(() {
+                        _selectedSegment = index;
+                        _searchController.clear();
+                        _searchQuery = '';
+                      });
+                    },
+                    onBackPressed: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        );
+                      }
+                    },
                   ),
                 ),
 
@@ -230,11 +186,14 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                 ),
 
                 // --- List Body ---
-                SliverFillRemaining(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: _buildListBody(),
-                  ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  sliver: _buildListBody(),
+                ),
+
+                // Spacing at the bottom for the floating navigation bar
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 120),
                 ),
               ],
             ),
@@ -268,38 +227,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     }
   }
 
-  Widget _buildSegmentButton(int index, String title) {
-    final isSelected = _selectedSegment == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedSegment = index;
-            _searchController.clear();
-            _searchQuery = '';
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.black : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF666666),
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildListBody() {
     switch (_selectedSegment) {
       case 0:
@@ -318,11 +245,17 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       stream: _firestoreService.streamAllFaculties(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: Colors.black));
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: CircularProgressIndicator(color: Colors.black),
+            ),
+          );
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return SliverToBoxAdapter(
+            child: Center(child: Text('Error: ${snapshot.error}')),
+          );
         }
 
         var items = (snapshot.data ?? []).toList();
@@ -333,29 +266,38 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   f.department.toLowerCase().contains(_searchQuery))
               .toList();
         }
-        
-        items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+        items.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
         if (items.isEmpty) {
-          return const Center(child: Text('No faculty found.'));
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text('No faculty found.')),
+          );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.only(bottom: 120),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 2),
-          itemBuilder: (context, index) {
-            final faculty = items[index];
-            return _buildDirectoryCard(
-              title: faculty.name,
-              subtitle: faculty.role.isNotEmpty ? faculty.role : faculty.designation,
-              department: faculty.department,
-              locationId: faculty.locationId,
-              photoUrl: faculty.photoUrl,
-              imageBytes: faculty.imageBytes,
-              model: faculty,
-            );
-          },
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index.isOdd) {
+                return const SizedBox(height: 2);
+              }
+              final itemIndex = index ~/ 2;
+              final faculty = items[itemIndex];
+              return _buildDirectoryCard(
+                title: faculty.name,
+                subtitle:
+                    faculty.role.isNotEmpty ? faculty.role : faculty.designation,
+                department: faculty.department,
+                locationId: faculty.locationId,
+                photoUrl: faculty.photoUrl,
+                imageBytes: faculty.imageBytes,
+                model: faculty,
+              );
+            },
+            childCount: (items.length * 2) - 1,
+          ),
         );
       },
     );
@@ -366,11 +308,17 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       stream: _firestoreService.streamAllHalls(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: Colors.black));
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: CircularProgressIndicator(color: Colors.black),
+            ),
+          );
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return SliverToBoxAdapter(
+            child: Center(child: Text('Error: ${snapshot.error}')),
+          );
         }
 
         var items = (snapshot.data ?? []).toList();
@@ -379,28 +327,38 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
               .where((h) => h.name.toLowerCase().contains(_searchQuery))
               .toList();
         }
-        
-        items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+        items.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
         if (items.isEmpty) {
-          return const Center(child: Text('No halls found.'));
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text('No halls found.')),
+          );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.only(bottom: 120),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 2),
-          itemBuilder: (context, index) {
-            final hall = items[index];
-            return _buildDirectoryCard(
-              title: hall.name,
-              subtitle: hall.typeString,
-              department: 'General',
-              locationId: hall.locationId,
-              fallbackIcon: Icons.meeting_room,
-              model: hall,
-            );
-          },
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index.isOdd) {
+                return const SizedBox(height: 2);
+              }
+              final itemIndex = index ~/ 2;
+              final hall = items[itemIndex];
+              return _buildDirectoryCard(
+                title: hall.name,
+                subtitle: hall.typeString,
+                department: hall.department,
+                locationId: hall.locationId,
+                photoUrl: hall.photoUrl,
+                imageBytes: hall.imageBytes,
+                fallbackIcon: Icons.meeting_room,
+                model: hall,
+              );
+            },
+            childCount: items.isEmpty ? 0 : (items.length * 2) - 1,
+          ),
         );
       },
     );
@@ -411,11 +369,17 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       stream: _firestoreService.streamAllLabs(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: Colors.black));
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: CircularProgressIndicator(color: Colors.black),
+            ),
+          );
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return SliverToBoxAdapter(
+            child: Center(child: Text('Error: ${snapshot.error}')),
+          );
         }
 
         var items = (snapshot.data ?? []).toList();
@@ -427,27 +391,37 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
               .toList();
         }
 
-        items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        items.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
         if (items.isEmpty) {
-          return const Center(child: Text('No labs found.'));
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text('No labs found.')),
+          );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.only(bottom: 120),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 2),
-          itemBuilder: (context, index) {
-            final lab = items[index];
-            return _buildDirectoryCard(
-              title: lab.name,
-              subtitle: 'Laboratory',
-              department: lab.department,
-              locationId: lab.locationId,
-              fallbackIcon: Icons.science,
-              model: lab,
-            );
-          },
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index.isOdd) {
+                return const SizedBox(height: 2);
+              }
+              final itemIndex = index ~/ 2;
+              final lab = items[itemIndex];
+              return _buildDirectoryCard(
+                title: lab.name,
+                subtitle: 'Laboratory',
+                department: lab.department,
+                locationId: lab.locationId,
+                photoUrl: lab.photoUrl,
+                imageBytes: lab.imageBytes,
+                fallbackIcon: Icons.science,
+                model: lab,
+              );
+            },
+            childCount: items.isEmpty ? 0 : (items.length * 2) - 1,
+          ),
         );
       },
     );
@@ -502,7 +476,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white24, width: 1.5),
+                        border: Border.all(color: Colors.white, width: 1.5),
                         color: const Color(0xFF333333),
                       ),
                       child: ClipRRect(
@@ -546,9 +520,15 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                     const SizedBox(width: 12),
                     // Compact Nav Button
                     GestureDetector(
-                      onTap: () => _handleNavigationTap(locationId, context),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _handleNavigationTap(
+                        locationId,
+                        context,
+                        location: location,
+                        building: bSnapshot.data,
+                      ),
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12), // Increased padding for better hit area
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
@@ -566,8 +546,18 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
-  Future<void> _handleNavigationTap(String locationId, BuildContext context) async {
+  Future<void> _handleNavigationTap(
+    String locationId,
+    BuildContext context, {
+    LocationModel? location,
+    BuildingModel? building,
+  }) async {
     try {
+      if (locationId.isEmpty && location == null) return;
+
+      // Dismiss keyboard to prevent focus issues during navigation
+      FocusScope.of(context).unfocus();
+
       // Show loading indicator
       showDialog(
         context: context,
@@ -575,35 +565,50 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.black)),
       );
 
-      final location = await _firestoreService.getLocation(locationId);
-      if (location != null && location.buildingId != null && mounted) {
-        final building = await _firestoreService.getBuilding(location.buildingId!);
+      // Use pre-fetched context data if available, otherwise fetch from Firestore with a timeout
+      final LocationModel? loc = location ??
+          await _firestoreService
+              .getLocation(locationId)
+              .timeout(const Duration(seconds: 5), onTimeout: () => null);
+
+      if (loc != null && loc.buildingId != null && mounted) {
+        final BuildingModel? bld = building ??
+            await _firestoreService
+                .getBuilding(loc.buildingId!)
+                .timeout(const Duration(seconds: 5), onTimeout: () => null);
 
         // Log search for analytics
-        if (building != null) {
+        if (bld != null) {
           final String platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
 
-          await _firestoreService.logSearch(SearchLogModel(
-            buildingId: building.id,
-            buildingName: building.name,
+          _firestoreService.logSearch(SearchLogModel(
+            buildingId: bld.id,
+            buildingName: bld.name,
             platform: platform,
-            query: location.name,
+            query: loc.name,
             timestamp: DateTime.now(),
           ));
+          
+          // Add to recent searches
+          if (mounted) {
+            final auth = context.read<app_auth.AuthProvider>();
+            await auth.addRecentSearch(locationId);
+            await _firestoreService.incrementSearchCount(locationId);
+          }
         }
 
         if (mounted) {
           Navigator.pop(context); // Close loading dialog
-          if (building != null && building.entryPoints.isNotEmpty) {
-            final entryPoint = building.entryPoints.first;
+          if (bld != null && bld.entryPoints.isNotEmpty) {
+            final entryPoint = bld.entryPoints.first;
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => OutdoorNavigationScreen(
-                  targetBuilding: building,
+                  targetBuilding: bld,
                   targetEntryPoint: entryPoint,
-                  destinationId: location.id,
-                  destinationName: location.name,
+                  destinationId: loc.id,
+                  destinationName: loc.name,
                   destLat: entryPoint.latitude,
                   destLng: entryPoint.longitude,
                 ),
@@ -619,7 +624,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         if (mounted) {
           Navigator.pop(context); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location data not found.')),
+            const SnackBar(content: Text('Location data not found or took too long.')),
           );
         }
       }
@@ -631,6 +636,121 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         );
       }
     }
+  }
+}
+
+class _DirectoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final int selectedSegment;
+  final ValueChanged<int> onSegmentChanged;
+  final VoidCallback onBackPressed;
+
+  _DirectoryHeaderDelegate({
+    required this.selectedSegment,
+    required this.onSegmentChanged,
+    required this.onBackPressed,
+  });
+
+  @override
+  double get minExtent => 160.0; // Total height of the header content
+
+  @override
+  double get maxExtent => 160.0;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: AppColors.backgroundLight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+
+            // --- Header (Back btn + Title) ---
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.arrow_back,
+                        color: Colors.white, size: 20),
+                    onPressed: onBackPressed,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    'Directory',
+                    style: TextStyle(
+                      fontSize: MediaQuery.of(context).size.width * 0.065 > 26 ? 26 : MediaQuery.of(context).size.width * 0.065,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // --- Segmented Control ---
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  _buildSegmentButton(context, 0, 'Faculty', selectedSegment),
+                  _buildSegmentButton(context, 1, 'Halls', selectedSegment),
+                  _buildSegmentButton(context, 2, 'Labs', selectedSegment),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSegmentButton(BuildContext context, int index, String title, int currentSelected) {
+    final isSelected = currentSelected == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onSegmentChanged(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.black : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFF666666),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _DirectoryHeaderDelegate oldDelegate) {
+    return selectedSegment != oldDelegate.selectedSegment;
   }
 }
 

@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../models/location_model.dart';
+import '../../models/faculty_model.dart';
+import '../../models/hall_model.dart';
+import '../../models/lab_model.dart';
+import '../../models/search_log_model.dart';
 import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart' as app_auth;
+import '../navigation/outdoor_navigation_screen.dart';
+import '../directory/directory_details_screen.dart';
 
 class RecentSearchesScreen extends StatefulWidget {
   const RecentSearchesScreen({super.key});
@@ -16,6 +25,7 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
   bool _isLoading = true;
   List<LocationModel> _recentSearches = [];
   Map<String, String> _buildingNames = {};
+  Map<String, dynamic> _locationModels = {};
 
   @override
   void initState() {
@@ -47,8 +57,19 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
         for (final bId in neededBuildingIds) {
           final building = await _firestoreService.getBuilding(bId);
           if (building != null) {
-            bNames[bId] = "IT Complex"; // To perfectly match the mockup we can just display IT Complex if there's no building name available, but let's use the real one. 
             bNames[bId] = building.name;
+          }
+        }
+
+        // Fetch specific models for each location
+        final Map<String, dynamic> locModels = {};
+        for (final loc in orderedLocs) {
+          if (loc.type == LocationType.faculty) {
+            locModels[loc.id] = await _firestoreService.getFacultyByLocationId(loc.id);
+          } else if (loc.type == LocationType.hall) {
+            locModels[loc.id] = await _firestoreService.getHallByLocationId(loc.id);
+          } else if (loc.type == LocationType.lab) {
+            locModels[loc.id] = await _firestoreService.getLabByLocationId(loc.id);
           }
         }
 
@@ -56,6 +77,7 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
           setState(() {
             _recentSearches = orderedLocs;
             _buildingNames = bNames;
+            _locationModels = locModels;
             _isLoading = false;
           });
         }
@@ -76,12 +98,10 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
 
   Future<void> _removeSearch(String locationId) async {
     final auth = context.read<app_auth.AuthProvider>();
-    final user = auth.currentUser;
-    if (user != null) {
-       await _firestoreService.removeRecentSearch(user.uid, locationId);
+    if (auth.currentUser != null) {
+       await auth.removeRecentSearch(locationId);
        setState(() {
          _recentSearches.removeWhere((loc) => loc.id == locationId);
-         user.recentSearches.remove(locationId); 
        });
     }
   }
@@ -108,13 +128,85 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
     if (confirm != true) return;
 
     final auth = context.read<app_auth.AuthProvider>();
-    final user = auth.currentUser;
-    if (user != null) {
-       await _firestoreService.clearAllRecentSearches(user.uid);
+    if (auth.currentUser != null) {
+       await auth.clearRecentSearches();
        setState(() {
          _recentSearches.clear();
-         user.recentSearches.clear();
        });
+    }
+  }
+
+  Future<void> _navigateToLocation(LocationModel location) async {
+    final auth = context.read<app_auth.AuthProvider>();
+    if (auth.currentUser != null) {
+        await auth.addRecentSearch(location.id);
+        await _firestoreService.incrementSearchCount(location.id);
+    }
+    
+    if (!mounted) return;
+    
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+    );
+
+    try {
+       if (location.buildingId != null) {
+          final building = await _firestoreService.getBuilding(location.buildingId!);
+          
+          // Log search for analytics
+          if (building != null) {
+            final String platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
+
+            await _firestoreService.logSearch(SearchLogModel(
+              buildingId: building.id,
+              buildingName: building.name,
+              platform: platform,
+              query: location.name,
+              timestamp: DateTime.now(),
+            ));
+          }
+          
+          if (mounted) {
+            Navigator.pop(context); // Close loading dialog
+            if (building != null && building.entryPoints.isNotEmpty) {
+               final entryPoint = building.entryPoints.first; // Default to first entry point
+               await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                     builder: (_) => OutdoorNavigationScreen(
+                        targetBuilding: building,
+                        targetEntryPoint: entryPoint,
+                        destinationId: location.id,
+                        destinationName: location.name,
+                        destLat: entryPoint.latitude,
+                        destLng: entryPoint.longitude,
+                     ),
+                  ),
+               );
+               _loadRecentSearches();
+            } else {
+               ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Building or entry point data not found.')),
+               );
+            }
+          }
+       } else {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Building data not found for this location.')),
+          );
+       }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        debugPrint('Error initiating navigation: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An error occurred while initiating navigation.')),
+        );
+      }
     }
   }
 
@@ -182,68 +274,36 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
   }
 
   Widget _buildSearchesList() {
-    // Split into today and yesterday for the UI mockup
-    final List<LocationModel> todaySearches = [];
-    final List<LocationModel> yesterdaySearches = [];
-    
-    for (int i = 0; i < _recentSearches.length; i++) {
-        if (i < 3) {
-            todaySearches.add(_recentSearches[i]);
-        } else {
-            yesterdaySearches.add(_recentSearches[i]);
-        }
-    }
-
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
-        // TODAY Header
-        if (todaySearches.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'TODAY',
-                style: TextStyle(
-                  color: Color(0xFF888888),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'RECENT SEARCHES',
+              style: TextStyle(
+                color: Color(0xFF888888),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
               ),
-              GestureDetector(
-                onTap: _clearAll,
-                child: const Text(
-                  'Clear all',
-                  style: TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...todaySearches.map((loc) => _buildCard(loc)),
-        ],
-
-        // YESTERDAY Header
-        if (yesterdaySearches.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          const Text(
-            'YESTERDAY',
-            style: TextStyle(
-              color: Color(0xFF888888),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
             ),
-          ),
-          const SizedBox(height: 16),
-          ...yesterdaySearches.map((loc) => _buildCard(loc)),
-        ],
-        
+            GestureDetector(
+              onTap: _clearAll,
+              child: const Text(
+                'Clear all',
+                style: TextStyle(
+                  color: Color(0xFF666666),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ..._recentSearches.map((loc) => _buildCard(loc)),
         const SizedBox(height: 48), // Bottom padding
       ],
     );
@@ -252,80 +312,126 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
   Widget _buildCard(LocationModel location) {
     // Determine building and floor text
     String buildingName = _buildingNames[location.buildingId] ?? 'Unknown Building';
-    if (buildingName.isEmpty) buildingName = 'IT Complex'; // fallback to image likeness if empty
+    if (buildingName.isEmpty) buildingName = 'IT Complex';
     
-    final String floorText = location.floor != null ? 'Floor ${location.floor}' : '';
-    final String subtitleText = floorText.isEmpty ? buildingName : '$buildingName    $floorText';
+    final model = _locationModels[location.id];
+    
+    // Prioritize room number in the subtitle as requested
+    String subtitle = (location.roomNumber != null && location.roomNumber!.isNotEmpty) 
+        ? 'Room ${location.roomNumber}' 
+        : buildingName;
 
-    // Icon fallback for the image
-    IconData iconData = Icons.location_on;
-    if (location.type == LocationType.lab) {
-      iconData = Icons.science;
-    } else if (location.type == LocationType.faculty) iconData = Icons.person;
-    else if (location.type == LocationType.hall) iconData = Icons.meeting_room;
+    // Icon fallback / Image bytes
+    dynamic imageToDisplay;
+    IconData fallbackIcon = Icons.location_on;
+    
+    if (model != null) {
+      if (model is FacultyModel) {
+        imageToDisplay = model.imageBytes ?? model.photoUrl;
+        fallbackIcon = Icons.person;
+      } else if (model is HallModel) {
+        fallbackIcon = Icons.meeting_room;
+      } else if (model is LabModel) {
+        fallbackIcon = Icons.science;
+      }
+    }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Left Image (Rounded Square with white border)
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white, width: 2),
-              color: const Color(0xFF333333),
+    return GestureDetector(
+      onTap: () {
+        if (model != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectoryDetailsScreen(
+                model: model,
+                location: location,
+                buildingName: _buildingNames[location.buildingId],
+              ),
             ),
-            child: Icon(iconData, color: const Color(0xFFCCCCCC), size: 28),
-          ),
-          const SizedBox(width: 16),
-          // Texts
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  location.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B1B1C), // Matching directory card color
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            // Left Image (matching directory style)
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white, width: 1.5),
+                color: const Color(0xFF333333),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imageToDisplay != null
+                    ? (imageToDisplay is Uint8List
+                        ? Image.memory(imageToDisplay, fit: BoxFit.cover)
+                        : Image.network(imageToDisplay as String, fit: BoxFit.cover))
+                    : Icon(fallbackIcon, color: Colors.white38, size: 28),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Texts
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    location.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitleText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFAAAAAA),
-                    fontSize: 13,
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF909090),
+                      fontSize: 13,
+                    ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Navigate button
+            GestureDetector(
+              onTap: () => _navigateToLocation(location),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
+                child: const Icon(Icons.near_me, color: Colors.black, size: 18),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // Close button
-          GestureDetector(
-            onTap: () => _removeSearch(location.id),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.transparent, // expand tap area
-              child: const Icon(Icons.close, color: Colors.white, size: 16),
+            const SizedBox(width: 4),
+            // Remove button
+            GestureDetector(
+              onTap: () => _removeSearch(location.id),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.transparent, 
+                child: const Icon(Icons.close, color: Colors.white54, size: 16),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

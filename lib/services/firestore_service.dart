@@ -54,10 +54,10 @@ class FirestoreService {
       List<String> recentSearches =
           List<String>.from(data['recentSearches'] ?? []);
 
-      // Remove if exists to move it to the front
-      recentSearches.remove(locationId);
-      // Add to front
+      // Ensure it's a unique list with the newest item on top
+      recentSearches.removeWhere((id) => id == locationId);
       recentSearches.insert(0, locationId);
+
       // Limit to 8
       if (recentSearches.length > 8) {
         recentSearches = recentSearches.sublist(0, 8);
@@ -77,7 +77,7 @@ class FirestoreService {
 
       List<String> recentSearches =
           List<String>.from(data['recentSearches'] ?? []);
-      recentSearches.remove(locationId);
+      recentSearches.removeWhere((id) => id == locationId);
       transaction.update(docRef, {'recentSearches': recentSearches});
     });
   }
@@ -250,6 +250,30 @@ class FirestoreService {
     });
   }
 
+  Future<FacultyModel?> getFacultyByLocationId(String locationId) async {
+    final query = await _faculties.where('locationId', isEqualTo: locationId).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return FacultyModel.fromFirestore(query.docs.first.data() as Map<String, dynamic>, query.docs.first.id);
+    }
+    return null;
+  }
+
+  Future<HallModel?> getHallByLocationId(String locationId) async {
+    final query = await _halls.where('locationId', isEqualTo: locationId).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return HallModel.fromFirestore(query.docs.first.data() as Map<String, dynamic>, query.docs.first.id);
+    }
+    return null;
+  }
+
+  Future<LabModel?> getLabByLocationId(String locationId) async {
+    final query = await _labs.where('locationId', isEqualTo: locationId).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return LabModel.fromFirestore(query.docs.first.data() as Map<String, dynamic>, query.docs.first.id);
+    }
+    return null;
+  }
+
   // ========== SEARCH OPERATIONS ==========
 
   Future<LocationModel?> getLocation(String id) async {
@@ -261,27 +285,55 @@ class FirestoreService {
     return null;
   }
 
-  Future<List<LocationModel>> searchLocations(String query) async {
-    // Convert query to lowercase for case-insensitive search
-    final searchQuery = query.toLowerCase();
+  bool _isSubsequence(String query, String target) {
+    if (query.isEmpty) return true;
+    int qIdx = 0;
+    for (int i = 0; i < target.length; i++) {
+      if (query[qIdx] == target[i]) {
+        qIdx++;
+        if (qIdx == query.length) return true;
+      }
+    }
+    return false;
+  }
 
-    // Get all locations that match the query in name or tags
+  Future<List<LocationModel>> searchLocations(String query) async {
+    // Format the query by removing internal spaces so it accurately slides through the subsequence check
+    final searchQuery = query.toLowerCase().replaceAll(' ', '');
+
     final snapshot = await _locations.where('isActive', isEqualTo: true).get();
 
     // Filter in memory (Firestore doesn't support text search natively)
-    final results = snapshot.docs.where((doc) {
+    final allMatches = snapshot.docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final name = (data['name'] ?? '').toString().toLowerCase();
       final tags = List<String>.from(data['tags'] ?? []);
+      final roomNumber = (data['roomNumber'] ?? '').toString().toLowerCase();
 
-      return name.contains(searchQuery) ||
-          tags.any((tag) => tag.toLowerCase().contains(searchQuery));
+      bool matchesName = _isSubsequence(searchQuery, name);
+      bool matchesTags = tags.any((tag) => _isSubsequence(searchQuery, tag.toLowerCase()));
+      bool matchesRoom = _isSubsequence(searchQuery, roomNumber);
+
+      return matchesName || matchesTags || matchesRoom;
     }).map((doc) {
       return LocationModel.fromFirestore(
           doc.data() as Map<String, dynamic>, doc.id);
     }).toList();
 
-    return results;
+    // Deduplicate results directly resolving overlapping string permutations
+    final Set<String> seenNames = {};
+    final List<LocationModel> uniqueResults = [];
+
+    for (var loc in allMatches) {
+      // Strip out punctuation and spaces for identity comparison (e.g. 'Jayaraj P B' == 'Jayaraj P. B.')
+      String normName = loc.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (!seenNames.contains(normName)) {
+        seenNames.add(normName);
+        uniqueResults.add(loc);
+      }
+    }
+
+    return uniqueResults;
   }
 
   Future<void> incrementSearchCount(String locationId) async {

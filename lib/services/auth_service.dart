@@ -313,6 +313,20 @@ class AuthService {
     }
   }
 
+  // ── Update Preferences ────────────────────────────────────────────────────
+  Future<void> updatePreferences(Map<String, dynamic> preferences) async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'User not authenticated.';
+
+    try {
+      await _db.collection('users').doc(user.uid).update({
+        'preferences': preferences,
+      });
+    } catch (e) {
+      throw 'Failed to update preferences: $e';
+    }
+  }
+
   // ── Password Management ───────────────────────────────────────────────────
   Future<void> sendPasswordResetEmail(String email) async {
     try {
