@@ -97,7 +97,8 @@ export async function fetchAllHalls() {
                 building: location.buildingId || '',
                 floor: location.floor !== undefined ? location.floor : '',
                 roomNumber: location.roomNumber || '',
-                category: 'HALL'
+                category: 'HALL',
+                imageUrl: hallData.imageUrl || ''
             };
         });
     } catch (err) {
@@ -125,6 +126,11 @@ export async function addHall(itemData) {
 
         await setDoc(locationRef, locationData);
 
+        let imageUrl = itemData.imageUrl || null;
+        if (itemData.imageFile) {
+            imageUrl = await fileToBase64(itemData.imageFile);
+        }
+
         // 2. Create Hall document (Strictly normalized)
         const finalItemData = {
             name: itemData.name,
@@ -133,7 +139,8 @@ export async function addHall(itemData) {
             locationId: locationRef.id,
             contactPerson: itemData.contactPerson || null,
             status: itemData.status,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            imageUrl: imageUrl
         };
 
         const nextId = await generateNextId();
@@ -181,6 +188,12 @@ export async function updateHall(id, itemData) {
             inchargeEmail: deleteField(),
             timing: deleteField()
         };
+
+        if (itemData.imageFile) {
+            hallUpdate.imageUrl = await fileToBase64(itemData.imageFile);
+        } else if (itemData.imageUrl !== undefined) {
+            hallUpdate.imageUrl = itemData.imageUrl;
+        }
 
         // Filter out undefined values but KEEP deleteField()
         Object.keys(hallUpdate).forEach(key => {

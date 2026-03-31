@@ -68,13 +68,13 @@ const HallsLabsDirectory = ({ processedData, buildings = [], onAdd, onEdit, onDe
           processedData.map((item) => (
             <div key={item.id} className="hl-table-row">
               <div className="hl-table-cell hl-cell-room">
-                <div className="hl-avatar">
-                  {item.mapUrl ? (
-                    <img src={item.mapUrl} alt="" className="hl-avatar-img" />
-                  ) : (
-                    getAvatarIcon(item.category)
-                  )}
-                </div>
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" className="hl-avatar" />
+                ) : (
+                  <div className="hl-avatar">
+                    {getAvatarIcon(item.category)}
+                  </div>
+                )}
                 <div>
                   <div className="hl-cell-strong">{item.name}</div>
                   <div style={{ fontSize: '0.9rem', color: '#9aa4af', marginTop: '0.2rem' }}>

@@ -97,7 +97,8 @@ export async function fetchAllLabs() {
                 building: location.buildingId || '',
                 floor: location.floor !== undefined ? location.floor : '',
                 roomNumber: location.roomNumber || '',
-                category: 'LAB'
+                category: 'LAB',
+                imageUrl: labData.imageUrl || ''
             };
         });
     } catch (err) {
@@ -125,6 +126,11 @@ export async function addLab(itemData) {
 
         await setDoc(locationRef, locationData);
 
+        let imageUrl = itemData.imageUrl || null;
+        if (itemData.imageFile) {
+            imageUrl = await fileToBase64(itemData.imageFile);
+        }
+
         // 2. Create Lab document (Strictly normalized)
         const finalItemData = {
             name: itemData.name,
@@ -134,7 +140,8 @@ export async function addLab(itemData) {
             incharge: itemData.incharge || null,
             inchargeEmail: itemData.inchargeEmail || null,
             status: itemData.status,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            imageUrl: imageUrl
         };
 
         const nextId = await generateNextId();
@@ -183,6 +190,12 @@ export async function updateLab(id, itemData) {
             localPreview: deleteField(),
             _localPreview: deleteField()
         };
+
+        if (itemData.imageFile) {
+            labUpdate.imageUrl = await fileToBase64(itemData.imageFile);
+        } else if (itemData.imageUrl !== undefined) {
+            labUpdate.imageUrl = itemData.imageUrl;
+        }
 
         // Filter out undefined values but KEEP deleteField()
         Object.keys(labUpdate).forEach(key => {

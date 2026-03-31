@@ -17,8 +17,8 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
         department: '',
         incharge: '',
         inchargeEmail: '',
-        mapUrl: '',
-        mapFile: null,
+        imageUrl: '',
+        imageFile: null,
         _localPreview: ''
     });
 
@@ -41,8 +41,8 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
                 department: item.department || '',
                 incharge: item.incharge || '',
                 inchargeEmail: item.inchargeEmail || '',
-                mapUrl: item.mapUrl || '',
-                mapFile: null,
+                imageUrl: item.imageUrl || '',
+                imageFile: null,
                 _localPreview: ''
             });
             // Load floors immediately for edit mode
@@ -102,7 +102,7 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
             }
             setFormData(prev => ({
                 ...prev,
-                mapFile: file,
+                imageFile: file,
                 _localPreview: URL.createObjectURL(file)
             }));
             setError('');
@@ -128,7 +128,7 @@ const HallsLabsForm = ({ item, buildings = [], onSave, onCancel }) => {
     };
 
     const isLab = formData.category === 'LAB';
-    const displayMap = formData._localPreview || formData.mapUrl;
+    const displayMap = formData._localPreview || formData.imageUrl;
 
     const renderInputFields = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
