@@ -177,8 +177,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: _buildListTile(
                     title: 'Recent Searches',
                     icon: Icons.history,
-                    iconColor: Colors.orange[600]!,
-                    iconBgColor: Colors.orange[50]!,
                   ),
                 ),
               ]),
@@ -197,9 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                   child: _buildListTile(
                     title: 'Change Password',
-                    icon: Icons.password, // Lock reset or similar
-                    iconColor: Colors.blueGrey[600]!,
-                    iconBgColor: Colors.blueGrey[50]!,
+                    icon: Icons.password,
                   ),
                 ),
                 const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
@@ -207,9 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   builder: (context, security, child) {
                     return _buildListTile(
                       title: 'PIN Lock',
-                      icon: Icons.pin_rounded, // or a similar 123 icon
-                      iconColor: Colors.blueGrey[600]!,
-                      iconBgColor: Colors.blueGrey[50]!,
+                      icon: Icons.pin_rounded,
                       trailing: Switch(
                         value: security.isDeviceLockEnabled,
                         activeColor: Colors.white,
@@ -239,8 +233,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildListTile(
                   title: 'Distance Metric',
                   icon: Icons.straighten,
-                  iconColor: Colors.green[600]!,
-                  iconBgColor: Colors.green[50]!,
                   trailing: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedDistanceMetric,
@@ -466,8 +458,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildListTile({
     required String title,
     required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
+    Color iconColor = Colors.white,
+    Color iconBgColor = Colors.black,
     Widget? trailing,
   }) {
     return Padding(
@@ -507,8 +499,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _buildListTile(
           title: 'Walking Speed',
           icon: Icons.directions_walk,
-          iconColor: Colors.purple[500]!,
-          iconBgColor: Colors.purple[50]!,
           trailing: const SizedBox.shrink(),
         ),
         Padding(
