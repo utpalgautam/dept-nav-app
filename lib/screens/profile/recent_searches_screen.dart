@@ -76,12 +76,10 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
 
   Future<void> _removeSearch(String locationId) async {
     final auth = context.read<app_auth.AuthProvider>();
-    final user = auth.currentUser;
-    if (user != null) {
-       await _firestoreService.removeRecentSearch(user.uid, locationId);
+    if (auth.currentUser != null) {
+       await auth.removeRecentSearch(locationId);
        setState(() {
          _recentSearches.removeWhere((loc) => loc.id == locationId);
-         user.recentSearches.remove(locationId); 
        });
     }
   }
@@ -108,12 +106,10 @@ class _RecentSearchesScreenState extends State<RecentSearchesScreen> {
     if (confirm != true) return;
 
     final auth = context.read<app_auth.AuthProvider>();
-    final user = auth.currentUser;
-    if (user != null) {
-       await _firestoreService.clearAllRecentSearches(user.uid);
+    if (auth.currentUser != null) {
+       await auth.clearRecentSearches();
        setState(() {
          _recentSearches.clear();
-         user.recentSearches.clear();
        });
     }
   }

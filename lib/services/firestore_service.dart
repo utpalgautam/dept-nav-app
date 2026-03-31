@@ -54,10 +54,10 @@ class FirestoreService {
       List<String> recentSearches =
           List<String>.from(data['recentSearches'] ?? []);
 
-      // Remove if exists to move it to the front
-      recentSearches.remove(locationId);
-      // Add to front
+      // Ensure it's a unique list with the newest item on top
+      recentSearches.removeWhere((id) => id == locationId);
       recentSearches.insert(0, locationId);
+
       // Limit to 8
       if (recentSearches.length > 8) {
         recentSearches = recentSearches.sublist(0, 8);
@@ -77,7 +77,7 @@ class FirestoreService {
 
       List<String> recentSearches =
           List<String>.from(data['recentSearches'] ?? []);
-      recentSearches.remove(locationId);
+      recentSearches.removeWhere((id) => id == locationId);
       transaction.update(docRef, {'recentSearches': recentSearches});
     });
   }

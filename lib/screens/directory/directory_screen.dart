@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
 import 'dart:io' show Platform;
 import '../../core/constants/colors.dart';
+import '../../providers/auth_provider.dart' as app_auth;
 import '../../models/faculty_model.dart';
 import '../../models/hall_model.dart';
 import '../../models/lab_model.dart';
@@ -901,6 +903,13 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             query: location.name, // Use destination name as query
             timestamp: DateTime.now(),
           ));
+          
+          // Add to recent searches
+          if (mounted) {
+            final auth = context.read<app_auth.AuthProvider>();
+            await auth.addRecentSearch(locationId);
+            await _firestoreService.incrementSearchCount(locationId);
+          }
         }
 
         if (mounted) {
