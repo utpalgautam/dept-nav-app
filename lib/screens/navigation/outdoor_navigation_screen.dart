@@ -59,6 +59,8 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
 
   // ── User Marker (smooth animated blue dot) ────────────────────────────
   Symbol? _userMarker;
+  Symbol? _destinationMarker;
+  LatLng? _currentDestMarkerPos;
   late AnimationController _markerAnimationController;
   LatLng? _previousPosition;
   LatLng? _targetPosition;
@@ -319,6 +321,21 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   // ─────────────────────────────────────────────────────────────────
   void _onProviderUpdated() {
     final provider = Provider.of<NavigationProvider>(context, listen: false);
+
+    if (provider.targetEntryPoint != null && _isMapReady && _mapController != null) {
+      final ep = provider.targetEntryPoint!;
+      final epLatLng = LatLng(ep.latitude, ep.longitude);
+      
+      if (_currentDestMarkerPos == null) {
+        _drawDynamicDestinationMarker(epLatLng);
+      } else if (_currentDestMarkerPos!.latitude != epLatLng.latitude || _currentDestMarkerPos!.longitude != epLatLng.longitude) {
+        if (_destinationMarker != null) {
+          _mapController!.removeSymbol(_destinationMarker!);
+          _destinationMarker = null;
+        }
+        _drawDynamicDestinationMarker(epLatLng);
+      }
+    }
 
     if (provider.currentRoute != null && _isMapReady) {
       _drawRoute(
@@ -661,18 +678,36 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
         widget.destLat == null ||
         widget.destLng == null) return;
     try {
-      await _mapController!.addSymbol(
+      final pos = LatLng(
+        widget.targetEntryPoint?.latitude ?? widget.destLat!,
+        widget.targetEntryPoint?.longitude ?? widget.destLng!,
+      );
+      _currentDestMarkerPos = pos;
+      _destinationMarker = await _mapController!.addSymbol(
         SymbolOptions(
-          geometry: LatLng(
-            widget.targetEntryPoint?.latitude ?? widget.destLat!,
-            widget.targetEntryPoint?.longitude ?? widget.destLng!,
-          ),
+          geometry: pos,
           iconImage: 'assets/icons/destination_marker.png',
           iconSize: 0.6,
         ),
       );
     } catch (e) {
       debugPrint('Error adding destination marker: $e');
+    }
+  }
+
+  void _drawDynamicDestinationMarker(LatLng position) async {
+    _currentDestMarkerPos = position;
+    if (_mapController == null) return;
+    try {
+      _destinationMarker = await _mapController!.addSymbol(
+        SymbolOptions(
+          geometry: position,
+          iconImage: 'assets/icons/destination_marker.png',
+          iconSize: 0.6,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error adding dynamic destination marker: $e');
     }
   }
 
@@ -701,7 +736,10 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   }
 
   void _navigateToIndoorScreen(BuildContext context) {
-    if (widget.targetBuilding != null && widget.targetEntryPoint != null) {
+    final provider = Provider.of<NavigationProvider>(context, listen: false);
+    final effectiveEntryPoint = provider.targetEntryPoint ?? widget.targetEntryPoint;
+
+    if (widget.targetBuilding != null && effectiveEntryPoint != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -709,7 +747,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
             buildingId: widget.targetBuilding!.id,
             buildingName: widget.targetBuilding!.name,
             floor: 0,
-            entryPointId: widget.targetEntryPoint!.id,
+            entryPointId: effectiveEntryPoint.id, // entryPointId will match entrance node label per user request
             destinationLocationId: widget.destinationId,
           ),
         ),

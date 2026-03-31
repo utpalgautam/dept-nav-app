@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+
+// Key must match the one in main.dart
+const String _kHasSeenOnboarding = 'hasSeenOnboarding';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -28,24 +32,24 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
+      // Firebase signed out (explicit logout, or token expired).
       _currentUser = null;
-      _isGuest = false; // Reset guest mode if firebase auth changes
+      _isGuest = false;
     } else {
-      // Firebase Auth persists sessions automatically.
-      // No remember_me check needed — user stays logged in until explicit logout.
+      // Firebase Auth has a persisted session (app restart, token refresh etc.).
+      // Only trust it if the user has a valid Firestore document.
       try {
         _currentUser = await _authService.getCurrentUserModel();
-      } catch (_) {
-        // Firestore read failed (e.g. security rules not set up yet).
-        // Fall back to a minimal model from Firebase Auth so the user
-        // still reaches the home page.
-        _currentUser = UserModel(
-          uid: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          name: firebaseUser.displayName ?? firebaseUser.email ?? 'User',
-          userType: UserType.student,
-          createdAt: DateTime.now(),
-        );
+        if (_currentUser == null) {
+          // Ghost/orphaned Firebase session — no Firestore account exists.
+          // Silently sign it out so the user lands on the login screen cleanly.
+          debugPrint('AuthProvider: Orphaned Firebase session — signing out ghost user.');
+          _authService.signOut().ignore();
+        }
+      } catch (e) {
+        // Firestore error — do not create a fallback, just show login.
+        debugPrint('AuthProvider: Firestore read error on session restore: $e');
+        _currentUser = null;
       }
     }
 
@@ -236,12 +240,22 @@ class AuthProvider extends ChangeNotifier {
     await _authService.signOut();
     _currentUser = null;
     _isGuest = false;
+    // Reset onboarding flag: next cold start after logout will show onboarding.
+    // Flow: logout → swipe-out app → reopen → onboarding → login → home.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kHasSeenOnboarding);
     notifyListeners();
   }
 
   void setGuestMode(bool value) {
     _isGuest = value;
-    if (value) _currentUser = null; 
+    if (value) _currentUser = null;
+    if (!value) {
+      // Exiting guest mode — reset onboarding so full flow runs on next launch.
+      SharedPreferences.getInstance().then(
+        (prefs) => prefs.remove(_kHasSeenOnboarding),
+      );
+    }
     notifyListeners();
   }
 
