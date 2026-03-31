@@ -207,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       trailing: Switch(
                         value: security.isDeviceLockEnabled,
                         activeColor: Colors.white,
-                        activeTrackColor: Colors.blue[600],
+                        activeTrackColor: Colors.black,
                         onChanged: (value) async {
                           if (value) {
                             final success = await security.authenticate();
@@ -237,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: DropdownButton<String>(
                       value: _selectedDistanceMetric,
                       icon: const Icon(Icons.expand_more, color: Colors.grey, size: 20),
-                      style: TextStyle(color: Colors.blue[600], fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500),
                       onChanged: (String? newValue) {
                         if (newValue != null) {
                           setState(() {
@@ -368,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.blue[600],
+                  color: Colors.black,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
@@ -409,7 +409,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Edit Details',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.blue[600],
+              color: Colors.black,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -550,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Container(
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? Colors.black : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: isSelected
                 ? [
@@ -567,7 +567,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             speed.toUpperCase(),
             style: TextStyle(
               fontSize: 11,
-              color: isSelected ? Colors.blue[600] : const Color(0xFF6B7280),
+              color: isSelected ? Colors.white : const Color(0xFF6B7280),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
