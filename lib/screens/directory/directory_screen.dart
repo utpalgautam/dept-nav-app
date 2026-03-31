@@ -338,23 +338,27 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.only(bottom: 120),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 2),
-          itemBuilder: (context, index) {
-            final hall = items[index];
-            return _buildDirectoryCard(
-              title: hall.name,
-              subtitle: hall.typeString,
-              department: 'General',
-              locationId: hall.locationId,
-              photoUrl: hall.photoUrl,
-              imageBytes: hall.imageBytes,
-              fallbackIcon: Icons.meeting_room,
-              model: hall,
-            );
-          },
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index.isOdd) {
+                return const SizedBox(height: 2);
+              }
+              final itemIndex = index ~/ 2;
+              final hall = items[itemIndex];
+              return _buildDirectoryCard(
+                title: hall.name,
+                subtitle: hall.typeString,
+                department: hall.department,
+                locationId: hall.locationId,
+                photoUrl: hall.photoUrl,
+                imageBytes: hall.imageBytes,
+                fallbackIcon: Icons.meeting_room,
+                model: hall,
+              );
+            },
+            childCount: items.isEmpty ? 0 : (items.length * 2) - 1,
+          ),
         );
       },
     );
@@ -397,23 +401,27 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.only(bottom: 120),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 2),
-          itemBuilder: (context, index) {
-            final lab = items[index];
-            return _buildDirectoryCard(
-              title: lab.name,
-              subtitle: 'Laboratory',
-              department: lab.department,
-              locationId: lab.locationId,
-              photoUrl: lab.photoUrl,
-              imageBytes: lab.imageBytes,
-              fallbackIcon: Icons.science,
-              model: lab,
-            );
-          },
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index.isOdd) {
+                return const SizedBox(height: 2);
+              }
+              final itemIndex = index ~/ 2;
+              final lab = items[itemIndex];
+              return _buildDirectoryCard(
+                title: lab.name,
+                subtitle: 'Laboratory',
+                department: lab.department,
+                locationId: lab.locationId,
+                photoUrl: lab.photoUrl,
+                imageBytes: lab.imageBytes,
+                fallbackIcon: Icons.science,
+                model: lab,
+              );
+            },
+            childCount: items.isEmpty ? 0 : (items.length * 2) - 1,
+          ),
         );
       },
     );
