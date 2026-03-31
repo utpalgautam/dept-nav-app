@@ -42,9 +42,10 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = await _authService.getCurrentUserModel();
         if (_currentUser == null) {
           // Ghost/orphaned Firebase session — no Firestore account exists.
-          // Silently sign it out so the user lands on the login screen cleanly.
-          debugPrint('AuthProvider: Orphaned Firebase session — signing out ghost user.');
-          _authService.signOut().ignore();
+          // Set to null so the user lands on the login screen cleanly.
+          // Do NOT aggressively call _authService.signOut() here because it
+          // causes a race condition with signInWithGoogle's ghost cleanup flow.
+          debugPrint('AuthProvider: Orphaned Firebase session detected.');
         }
       } catch (e) {
         // Firestore error — do not create a fallback, just show login.
