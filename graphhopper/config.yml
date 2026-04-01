@@ -1,5 +1,5 @@
 graphhopper:
-  datareader.file: nitc_fixed.osm.pbf
+  datareader.file: nit_complete.osm.pbf
   graph.location: graph-cache
 
   # Required in GH 9.x

@@ -1076,6 +1076,7 @@ class NavigationProvider extends ChangeNotifier {
     _positionStreamSubscription = null;
     _stopPdrSensors();
     
+    _voiceService.stop(); // Immediately silence any ongoing speech instructions
     _voiceService.resetLastSpoken();
     
     notifyListeners();
