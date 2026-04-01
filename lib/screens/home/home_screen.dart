@@ -270,32 +270,35 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-      child: AnimatedRainbowBorder(
-        borderRadius: 30.0,
-        borderWidth: 2.5,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(27.5),
-          ),
-          child: const Row(
-            children: [
-              SizedBox(width: 18),
-              Icon(Icons.search, color: Colors.white70, size: 22),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Search cabins, halls, labs...',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Row(
+          children: [
+            SizedBox(width: 18),
+            Icon(Icons.search, color: Colors.black54, size: 22),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Search cabins, halls, labs...',
+                style: TextStyle(
+                  color: Colors.black45,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
-              SizedBox(width: 18),
-            ],
-          ),
+            ),
+            SizedBox(width: 18),
+          ],
         ),
       ),
     );

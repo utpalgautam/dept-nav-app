@@ -5,12 +5,14 @@ class AnimatedRainbowBorder extends StatefulWidget {
   final Widget child;
   final double borderRadius;
   final double borderWidth;
+  final Color backgroundColor;
 
   const AnimatedRainbowBorder({
     super.key,
     required this.child,
     this.borderRadius = 30.0,
     this.borderWidth = 2.0,
+    this.backgroundColor = const Color(0xFF0F0F13), // Default deep dark inner background
   });
 
   @override
@@ -60,7 +62,7 @@ class _AnimatedRainbowBorderState extends State<AnimatedRainbowBorder>
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF0F0F13), // Deep dark inner background
+              color: widget.backgroundColor,
               borderRadius: BorderRadius.circular(
                   widget.borderRadius - widget.borderWidth),
             ),
