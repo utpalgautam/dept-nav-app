@@ -9,8 +9,10 @@ class AppConstants {
   static const String prefUserType = 'user_type';
   
   // GraphHopper Server
-  static const String graphHopperBaseUrl = 'https://group1-departmentalnavigation.onrender.com'; // Hosted on Render
-  static const String graphHopperApiKey = ''; // Not needed for self-hostedf-hosted
+  // For local testing (physical device): use your PC's IP (e.g. http://192.168.1.5:8989)
+  // For local testing (emulator): use http://10.0.2.2:8989
+  static const String graphHopperBaseUrl = 'https://group1-departmentalnavigation.onrender.com';
+  static const String graphHopperApiKey = ''; // Not needed for self-hosted
   
   // Map Defaults
   static const double defaultMapZoom = 17.0;

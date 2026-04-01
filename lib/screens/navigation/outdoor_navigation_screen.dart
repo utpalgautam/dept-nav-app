@@ -829,7 +829,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                     zoom: AppConstants.defaultMapZoom,
                     tilt: 45,
                   ),
-                  styleString: _NavMapStyle.positron,
+                  styleString: _NavMapStyle.classic,
                   myLocationEnabled: false, // custom marker for smooth animation
                   myLocationRenderMode: MyLocationRenderMode.normal,
                   compassEnabled: false, // custom compass button
@@ -1086,6 +1086,8 @@ class _RecenterPill extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NavMapStyle {
+  static const String classic =
+      'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
   static const String darkMatter =
       'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
   static const String positron =

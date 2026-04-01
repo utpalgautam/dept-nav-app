@@ -293,7 +293,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
               zoom: 17.0,
               tilt: 0,
             ),
-            styleString: MapStyle.voyager,
+            styleString: MapStyle.classic,
             myLocationEnabled: false, // Using custom layered blue dot
             myLocationRenderMode: MyLocationRenderMode.normal,
             myLocationTrackingMode: MyLocationTrackingMode.none,
@@ -483,6 +483,10 @@ class _RecenterButton extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MapStyle {
+  /// Classical Map Style (Carto Voyager)
+  static const String classic =
+      'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+
   /// Carto Dark Matter GL — free, no API key required
   static const String darkMatter =
       'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
