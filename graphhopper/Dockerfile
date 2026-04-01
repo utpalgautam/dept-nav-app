@@ -5,7 +5,7 @@ WORKDIR /app
 # Copy the pre-downloaded JAR, config, and map data
 COPY graphhopper-web-9.1.jar /app/
 COPY config.yml /app/
-COPY nitc_fixed.osm.pbf /app/
+COPY nit_complete.osm.pbf /app/
 
 # Copy the pre-built graph-cache to speed up boot times on Render
 COPY graph-cache /app/graph-cache
