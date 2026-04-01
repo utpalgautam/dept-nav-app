@@ -246,69 +246,66 @@ class _IndoorNavigationSetupScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Text(
-                                  'Select Route',
-                                  style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black),
-                                ),
-                                const SizedBox(height: 24),
-                                _buildDropdown<BuildingModel>(
-                                  label: '1. Building',
-                                  hint: 'Select Building',
-                                  value: _selectedBuilding,
-                                  items: _buildings.map((b) {
-                                    return DropdownMenuItem(
-                                      value: b,
-                                      child: Text(b.name),
-                                    );
-                                  }).toList(),
-                                  onChanged: _onBuildingChanged,
-                                ),
-                                const SizedBox(height: 16),
-                                const SizedBox(height: 16),
-                                _buildDropdown<GraphNode>(
-                                  label: '2. Start Node',
-                                  hint: 'Select Start Node',
-                                  value: _selectedStartNode,
-                                  items: _allBuildingNodes.map((n) {
-                                    final floor = _nodeFloorMap[n];
-                                    final floorLabel =
-                                        floor == 0 ? 'GF' : 'F$floor';
-                                    return DropdownMenuItem(
-                                      value: n,
-                                      child: Text(
-                                          '${n.label} (${n.type}, $floorLabel)'),
-                                    );
-                                  }).toList(),
-                                  onChanged: _allBuildingNodes.isEmpty
-                                      ? null
-                                      : (val) => setState(
-                                          () => _selectedStartNode = val),
-                                ),
-                                const SizedBox(height: 16),
-                                _buildDropdown<GraphNode>(
-                                  label: '3. Destination Node',
-                                  hint: 'Select Destination Node',
-                                  value: _selectedEndNode,
-                                  items: _allBuildingNodes.map((n) {
-                                    final floor = _nodeFloorMap[n];
-                                    final floorLabel =
-                                        floor == 0 ? 'GF' : 'F$floor';
-                                    return DropdownMenuItem(
-                                      value: n,
-                                      child: Text(
-                                          '${n.label} (${n.type}, $floorLabel)'),
-                                    );
-                                  }).toList(),
-                                  onChanged: _allBuildingNodes.isEmpty
-                                      ? null
-                                      : (val) => setState(
-                                          () => _selectedEndNode = val),
-                                ),
-                                const SizedBox(height: 48),
-                                _buildStartNavigationSlider(),
+                                 const Text(
+                                   'Select Route',
+                                   style: TextStyle(
+                                       fontSize: 20,
+                                       fontWeight: FontWeight.bold,
+                                       color: Colors.black),
+                                 ),
+                                 const SizedBox(height: 24),
+                                 
+                                 // 1. Building Selection
+                                 _buildSelectionField(
+                                   label: '1. Building',
+                                   hint: 'Select Building',
+                                   value: _selectedBuilding?.name,
+                                   icon: Icons.business_rounded,
+                                   onTap: () {
+                                     _showBuildingSelector();
+                                   },
+                                 ),
+                                 const SizedBox(height: 16),
+
+                                 // 2. Start Node Selection
+                                 _buildSelectionField(
+                                   label: '2. Start Point',
+                                   hint: 'Select Start Point',
+                                   value: _selectedStartNode != null 
+                                     ? '${_selectedStartNode!.label} (${_getFloorLabel(_nodeFloorMap[_selectedStartNode])})'
+                                     : null,
+                                   icon: Icons.trip_origin_rounded,
+                                   onTap: _selectedBuilding == null ? null : () {
+                                     _showNodeSelector(isStart: true);
+                                   },
+                                 ),
+                                 const SizedBox(height: 16),
+
+                                 // 3. Destination Node Selection
+                                 _buildSelectionField(
+                                   label: '3. Destination',
+                                   hint: 'Select Destination',
+                                   value: _selectedEndNode != null 
+                                     ? '${_selectedEndNode!.label} (${_getFloorLabel(_nodeFloorMap[_selectedEndNode])})'
+                                     : null,
+                                   icon: Icons.location_on_rounded,
+                                   onTap: _selectedBuilding == null ? null : () {
+                                     _showNodeSelector(isStart: false);
+                                   },
+                                 ),
+                                 
+                                 if (_isLoadingGraph) ...[
+                                   const SizedBox(height: 16),
+                                   const Center(
+                                     child: SizedBox(
+                                       width: 20,
+                                       height: 20,
+                                       child: CircularProgressIndicator(strokeWidth: 2),
+                                     ),
+                                   ),
+                                 ],
+                                 const SizedBox(height: 48),
+                                 _buildStartNavigationSlider(),
                               ],
                             ),
                           ),
@@ -424,13 +421,19 @@ class _IndoorNavigationSetupScreenState
     );
   }
 
-  Widget _buildDropdown<T>({
+  String _getFloorLabel(int? floor) {
+    if (floor == null) return 'Unknown';
+    return floor == 0 ? 'Ground Floor' : 'Floor $floor';
+  }
+
+  Widget _buildSelectionField({
     required String label,
     required String hint,
-    required T? value,
-    required List<DropdownMenuItem<T>> items,
-    required void Function(T?)? onChanged,
+    required String? value,
+    required IconData icon,
+    required VoidCallback? onTap,
   }) {
+    final bool isEnabled = onTap != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -443,28 +446,337 @@ class _IndoorNavigationSetupScreenState
           ),
         ),
         const SizedBox(height: 8),
-        Semantics(
-          label: hint,
-          container: true,
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: isEnabled ? Colors.grey[50] : Colors.grey[100],
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<T>(
-                isExpanded: true,
-                value: value,
-                hint: Text(hint),
-                items: items,
-                onChanged: onChanged,
+              border: Border.all(
+                color: isEnabled ? Colors.black.withOpacity(0.1) : Colors.grey[300]!,
+                width: 1.5,
               ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 22,
+                  color: isEnabled ? Colors.black87 : Colors.grey[400],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    value ?? hint,
+                    style: TextStyle(
+                      color: value != null 
+                        ? Colors.black87 
+                        : (isEnabled ? Colors.black38 : Colors.grey[400]),
+                      fontSize: 15,
+                      fontWeight: value != null ? FontWeight.w500 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.unfold_more_rounded,
+                  size: 20,
+                  color: isEnabled ? Colors.black45 : Colors.grey[300],
+                ),
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  void _showBuildingSelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildModernSelectorSheet<BuildingModel>(
+        title: 'Select Building',
+        items: _buildings,
+        itemBuilder: (building) => ListTile(
+          leading: const Icon(Icons.business_rounded, color: Colors.black87),
+          title: Text(
+            building.name,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text('${building.totalFloors} Floors Available'),
+          onTap: () {
+            _onBuildingChanged(building);
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showNodeSelector({required bool isStart}) {
+    if (_allBuildingNodes.isEmpty) return;
+
+    // Group nodes by floor
+    final Map<int, List<GraphNode>> groupedNodes = {};
+    for (var node in _allBuildingNodes) {
+      final floor = _nodeFloorMap[node] ?? 0;
+      groupedNodes.putIfAbsent(floor, () => []).add(node);
+    }
+    
+    final List<int> sortedFloors = groupedNodes.keys.toList()..sort();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _NodeSelectorSheet(
+        title: isStart ? 'Select Start Point' : 'Select Destination',
+        groupedNodes: groupedNodes,
+        sortedFloors: sortedFloors,
+        onSelected: (node) {
+          setState(() {
+            if (isStart) {
+              _selectedStartNode = node;
+            } else {
+              _selectedEndNode = node;
+            }
+          });
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernSelectorSheet<T>({
+    required String title,
+    required List<T> items,
+    required Widget Function(T) itemBuilder,
+  }) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
+              itemBuilder: (context, index) => itemBuilder(items[index]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NodeSelectorSheet extends StatefulWidget {
+  final String title;
+  final Map<int, List<GraphNode>> groupedNodes;
+  final List<int> sortedFloors;
+  final Function(GraphNode) onSelected;
+
+  const _NodeSelectorSheet({
+    required this.title,
+    required this.groupedNodes,
+    required this.sortedFloors,
+    required this.onSelected,
+  });
+
+  @override
+  State<_NodeSelectorSheet> createState() => _NodeSelectorSheetState();
+}
+
+class _NodeSelectorSheetState extends State<_NodeSelectorSheet> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.grey[100],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: TextField(
+              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Search room, lab, staircase...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+              itemCount: widget.sortedFloors.length,
+              itemBuilder: (context, floorIndex) {
+                final floor = widget.sortedFloors[floorIndex];
+                final nodes = widget.groupedNodes[floor]!.where((n) {
+                  if (_searchQuery.isEmpty) return true;
+                  return n.label.toLowerCase().contains(_searchQuery) ||
+                         n.type.toLowerCase().contains(_searchQuery);
+                }).toList();
+
+                if (nodes.isEmpty) return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+                      child: Text(
+                        floor == 0 ? 'GROUND FLOOR' : 'FLOOR $floor',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black.withOpacity(0.4),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    ...nodes.map((node) => _buildNodeItem(node)),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNodeItem(GraphNode node) {
+    IconData icon;
+    final iconColor = Colors.black87;
+    final bgColor = const Color(0xFFF0F0F0);
+    
+    switch (node.type.toLowerCase()) {
+      case 'room':
+        icon = Icons.meeting_room_outlined;
+        break;
+      case 'stairs':
+      case 'staircase':
+        icon = Icons.stairs_rounded;
+        break;
+      case 'elevator':
+        icon = Icons.elevator_rounded;
+        break;
+      case 'washroom':
+        icon = Icons.wc_rounded;
+        break;
+      case 'entrance':
+        icon = Icons.door_front_door_rounded;
+        break;
+      default:
+        icon = Icons.place_outlined;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+      ),
+      child: ListTile(
+        onTap: () => widget.onSelected(node),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        title: Text(
+          node.label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+        ),
+        subtitle: Text(
+          node.type.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.black.withOpacity(0.4),
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.black26),
+      ),
     );
   }
 }
