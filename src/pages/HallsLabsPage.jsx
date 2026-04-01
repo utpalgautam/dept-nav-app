@@ -8,6 +8,7 @@ import Pagination from '../components/Pagination';
 import { fetchAllHalls, addHall, updateHall, deleteHall } from '../services/hallsService';
 import { fetchAllLabs, addLab, updateLab, deleteLab } from '../services/labsService';
 import { fetchAllBuildings } from '../services/buildingService';
+import { matchesSubsequence } from '../utils/search';
 
 const HallsLabsPage = () => {
   const location = useLocation();
@@ -103,10 +104,10 @@ const HallsLabsPage = () => {
   const getProcessedData = () => {
     let filtered = hallsData.filter(item => {
       const bldgName = buildings.find(b => b.id === item.building)?.name || item.building || '';
-      return item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             bldgName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.roomNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.type || '').toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSubsequence(searchTerm, item.name) ||
+             matchesSubsequence(searchTerm, bldgName) ||
+             matchesSubsequence(searchTerm, item.roomNumber) ||
+             matchesSubsequence(searchTerm, item.type);
     });
 
     filtered.sort((a, b) => {

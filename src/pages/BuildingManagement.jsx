@@ -6,6 +6,7 @@ import BuildingCards from '../components/BuildingCards';
 import BuildingDetails from '../components/BuildingDetails';
 import BuildingForm from '../components/BuildingForm';
 import { fetchAllBuildings, addBuilding, updateBuilding, deleteBuilding } from '../services/buildingService';
+import { matchesSubsequence } from '../utils/search';
 
 const BuildingManagement = () => {
   const location = useLocation();
@@ -107,7 +108,7 @@ const BuildingManagement = () => {
 
   // Derive filtered + sorted buildings
   const processedBuildings = (buildings || [])
-    .filter(b => (b?.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(b => matchesSubsequence(searchQuery, b?.name))
     .sort((a, b) => {
       const nameA = a?.name || '';
       const nameB = b?.name || '';

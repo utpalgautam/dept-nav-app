@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Pagination from '../components/Pagination';
 import { fetchAllFaculty, addFaculty, updateFaculty, deleteFaculty } from '../services/facultyService';
 import { fetchAllBuildings } from '../services/buildingService';
+import { matchesSubsequence } from '../utils/search';
 
 const FacultyManagement = () => {
   const location = useLocation();
@@ -75,7 +76,7 @@ const FacultyManagement = () => {
   };
 
   const processedData = facultyData
-    .filter(f => f.name?.toLowerCase().includes(searchQuery.toLowerCase()) || f.cabin?.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(f => matchesSubsequence(searchQuery, f.name) || matchesSubsequence(searchQuery, f.cabin))
     .sort((a, b) => sortAsc
       ? (a.name || '').localeCompare(b.name || '')
       : (b.name || '').localeCompare(a.name || '')

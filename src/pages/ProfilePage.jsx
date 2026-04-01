@@ -9,7 +9,7 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(userData?.name || '');
-    const [profilePic, setProfilePic] = useState(userData?.profilePic || '');
+    const [profilePic, setProfilePic] = useState(userData?.profileImageUrl || '');
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -18,7 +18,7 @@ const ProfilePage = () => {
     useEffect(() => {
         if (userData) {
             setName(userData.name || '');
-            setProfilePic(userData.profilePic || '');
+            setProfilePic(userData.profileImageUrl || '');
         }
     }, [userData]);
 
@@ -58,7 +58,7 @@ const ProfilePage = () => {
         setLoading(true);
         setMessage({ type: '', text: '' });
 
-        const result = await updateUserData({ name, profilePic });
+        const result = await updateUserData({ name, profileImageUrl: profilePic });
 
         if (result.success) {
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -72,7 +72,7 @@ const ProfilePage = () => {
 
     const handleCancel = () => {
         setName(userData?.name || '');
-        setProfilePic(userData?.profilePic || '');
+        setProfilePic(userData?.profileImageUrl || '');
         setIsEditing(false);
         setMessage({ type: '', text: '' });
     };

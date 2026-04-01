@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import Pagination from '../components/Pagination';
 import { fetchAllUsers, updateUserStatus, resetUserPassword, addUser, updateUser, deleteUser } from '../services/userService';
 import UserForm from '../components/UserForm';
+import { matchesSubsequence } from '../utils/search';
 
 const UserManagementPage = () => {
   const location = useLocation();
@@ -39,8 +40,8 @@ const UserManagementPage = () => {
       const name = user?.name || '';
       const email = user?.email || '';
       const matchesSearch =
-        email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        name.toLowerCase().includes(searchQuery.toLowerCase());
+        matchesSubsequence(searchQuery, email) ||
+        matchesSubsequence(searchQuery, name);
       return matchesSearch;
     });
 
