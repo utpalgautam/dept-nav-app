@@ -6,7 +6,7 @@ class UserModel {
   final String uid;
   final String email;
   final String name;
-  final String? branch;
+  final String? department;
   final String? year;
   final UserType userType;
   final DateTime createdAt;
@@ -21,7 +21,7 @@ class UserModel {
     required this.uid,
     required this.email,
     required this.name,
-    this.branch,
+    this.department,
     this.year,
     required this.userType,
     required this.createdAt,
@@ -39,7 +39,7 @@ class UserModel {
       uid: uid,
       email: data['email'] ?? '',
       name: data['name'] ?? '',
-      branch: data['branch'],
+      department: data['department'],
       year: data['year'],
       userType: _parseUserType(data['userType']),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -57,7 +57,7 @@ class UserModel {
     return {
       'email': email,
       'name': name,
-      'branch': branch,
+      'department': department,
       'year': year,
       'userType': userType.toString().split('.').last,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -101,7 +101,7 @@ class UserModel {
   UserModel copyWith({
     String? email,
     String? name,
-    String? branch,
+    String? department,
     String? year,
     UserType? userType,
     DateTime? lastLogin,
@@ -115,7 +115,7 @@ class UserModel {
       uid: uid,
       email: email ?? this.email,
       name: name ?? this.name,
-      branch: branch ?? this.branch,
+      department: department ?? this.department ,
       year: year ?? this.year,
       userType: userType ?? this.userType,
       createdAt: createdAt,

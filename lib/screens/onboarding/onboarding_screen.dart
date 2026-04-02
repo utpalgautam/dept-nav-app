@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../main.dart' show kHasSeenOnboarding;
 import '../auth/login_screen.dart';
@@ -40,6 +39,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Page state ─────────────────────────────────────────────────────────────
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  // Separate notifier to safely drive AnimatedBuilder without framework assertions
+  final ValueNotifier<double> _pageNotifier = ValueNotifier<double>(0.0);
 
   static const List<_OnboardingPage> _pages = [
     _OnboardingPage(
@@ -110,13 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     Interval(0.35, 0.85, curve: Curves.easeOut), // subtitle
   ];
 
-  // ── Illustration ambient: subtle image parallax on page scroll ─────────────
-  late final AnimationController _swayCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 3200),
-  );
 
-  bool _navigating = false;
 
   @override
   void initState() {
@@ -126,20 +121,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _entranceCtrl.forward().then((_) {
       _textCtrl.forward(); // start text after panel appears
     });
-    _swayCtrl.repeat(reverse: true);
     _pageController.addListener(() {
       if (!_pageController.hasClients || !_pageController.position.haveDimensions) return;
       final page = _pageController.page ?? 0.0;
-      if (page >= _pages.length - 1 && !_navigating) {
-        _navigating = true;
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (mounted && (_pageController.page ?? 0.0) >= _pages.length - 1) {
-            _completeOnboarding();
-          } else {
-            _navigating = false;
-          }
-        });
-      }
+      _pageNotifier.value = page;
     });
   }
 
@@ -148,7 +133,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pageController.dispose();
     _entranceCtrl.dispose();
     _textCtrl.dispose();
-    _swayCtrl.dispose();
+    _pageNotifier.dispose();
     super.dispose();
   }
 
@@ -178,6 +163,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ..forward();
   }
 
+  void _nextPage() {
+    if (_currentPage < _pages.length - 1) {
+      _pageController.animateToPage(
+        _currentPage + 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _completeOnboarding();
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Build
   // ─────────────────────────────────────────────────────────────────────────
@@ -198,13 +195,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
             child: AnimatedBuilder(
-              animation: _pageController,
+              animation: _pageNotifier,
               builder: (context, child) {
-                double page = 0.0;
-                if (_pageController.hasClients &&
-                    _pageController.position.haveDimensions) {
-                  page = _pageController.page ?? 0.0;
-                }
+                final page = _pageNotifier.value;
 
                 // Panorama logic for pages 0, 1, 2
                 // Alignment moves from -1.0 to 1.0 slowly.
@@ -277,17 +270,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               } else {
                 targetPage = currentPage.round().clamp(0, _pages.length - 1);
               }
-              if (targetPage == _pages.length - 1 &&
-                  currentPage >= (_pages.length - 1) - 0.01 &&
-                  velocity < -300) {
-                _completeOnboarding();
-              } else {
-                _pageController.animateToPage(
-                  targetPage,
-                  duration: const Duration(milliseconds: 380),
-                  curve: Curves.easeOutCubic,
-                );
-              }
+              _pageController.animateToPage(
+                targetPage,
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+              );
             },
             behavior: HitTestBehavior.translucent,
           ),
@@ -430,135 +417,90 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // Bottom navigation bar
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildBottomBar() {
-    const double barHeight = 68.0;
-    const double iconSize = 52.0;
-    const double edgePad = 8.0;
+    final bool isLastPage = _currentPage == _pages.length - 1;
 
-    return Container(
-      height: barHeight,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(40),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          // ── Dot indicators ──
+          Row(
+            children: List.generate(_pages.length, (i) {
+              final bool isActive = i == _currentPage;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: isActive ? 24 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.3),
+                ),
+              );
+            }),
           ),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final totalWidth = constraints.maxWidth;
-          // Track runs from left icon start to right edge of slider
-          const double trackLeft = edgePad + iconSize / 2;
-          final double trackRight = totalWidth - edgePad - iconSize / 2;
-          final double trackSpan = trackRight - trackLeft;
-          final double maxPage = (_pages.length - 1).toDouble();
-
-          return Stack(
-            children: [
-              // ── Sliding white walking circle (draggable) ─────────────────
-              AnimatedBuilder(
-                animation: _pageController,
-                builder: (context, child) {
-                  double page = _currentPage.toDouble();
-                  if (_pageController.hasClients &&
-                      _pageController.position.haveDimensions) {
-                    page = _pageController.page ?? page;
-                  }
-
-                  double fraction = page % 1.0;
-                  bool isMoving = fraction > 0.01 && fraction < 0.99;
-
-                  // Map page (0..maxPage) → x center position across the track
-                  double t = (page / maxPage).clamp(0.0, 1.0);
-                  double xCenter = trackLeft + t * trackSpan;
-                  double topOffset = (barHeight - iconSize) / 2;
-                  
-                  bool isDone = t > 0.99;
-
-                  return Positioned(
-                    left: xCenter - (iconSize + 10) / 2,
-                    top: topOffset - 5,
-                    width: iconSize + 10,
-                    height: iconSize + 10,
-                    // GestureDetector wraps only the icon for drag control
-                    child: GestureDetector(
-                      onHorizontalDragStart: (_) {
-                        // Stop any in-progress animation when user grabs the icon
-                        _pageController.jumpTo(_pageController.offset);
-                      },
-                      onHorizontalDragUpdate: (details) {
-                        if (!_pageController.hasClients ||
-                            !_pageController.position.haveDimensions) return;
-                        // dx in pixels → page units via trackSpan
-                        final pageDelta = details.delta.dx / trackSpan * maxPage;
-                        final newPage = (_pageController.page! + pageDelta)
-                            .clamp(0.0, maxPage);
-                        final screenWidth = MediaQuery.of(context).size.width;
-                        _pageController.jumpTo(newPage * screenWidth);
-                      },
-                      onHorizontalDragEnd: (details) {
-                        if (!_pageController.hasClients ||
-                            !_pageController.position.haveDimensions) return;
-                        final currentPage = _pageController.page!;
-                        final velocity = details.primaryVelocity ?? 0;
-                        int targetPage;
-                        // For the slider icon, dragging RIGHT is positive velocity, which increases the page
-                        if (velocity > 300) {
-                          targetPage = (currentPage + 1).floor().clamp(0, _pages.length - 1);
-                        } else if (velocity < -300) {
-                          targetPage = (currentPage - 1).ceil().clamp(0, _pages.length - 1);
-                        } else {
-                          targetPage = currentPage.round().clamp(0, _pages.length - 1);
-                        }
-                        
-                        HapticFeedback.selectionClick();
-                        _pageController.animateToPage(
-                          targetPage,
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeOutCubic,
-                        );
-                      },
-                      child: Center(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOutBack,
-                          width: isDone ? iconSize + 8 : iconSize,
-                          height: isDone ? iconSize + 8 : iconSize,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              if (isMoving || isDone)
-                                BoxShadow(
-                                  color: Colors.white.withValues(alpha: isDone ? 0.5 : 0.25),
-                                  blurRadius: isDone ? 18 : 12,
-                                  spreadRadius: isDone ? 4 : 2,
-                                )
-                            ],
-                          ),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            transitionBuilder: (child, animation) =>
-                                ScaleTransition(scale: animation, child: FadeTransition(opacity: animation, child: child)),
-                            child: Icon(
-                              isDone ? Icons.check_rounded : Icons.directions_walk_rounded,
-                              key: ValueKey<bool>(isDone),
-                              color: Colors.black,
-                              size: isDone ? 30 : 26,
-                            ),
-                          ),
-                        ),
+          const Spacer(),
+          // ── Continue / Get Started button ──
+          GestureDetector(
+            onTap: _nextPage,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              height: 44,
+              padding: EdgeInsets.symmetric(
+                horizontal: isLastPage ? 22 : 16,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.1, 0),
+                          end: Offset.zero,
+                        ).animate(anim),
+                        child: child,
                       ),
                     ),
-                  );
-                },
+                    child: Text(
+                      isLastPage ? 'Get Started' : 'Continue',
+                      key: ValueKey<bool>(isLastPage),
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    isLastPage ? Icons.arrow_forward_rounded : Icons.arrow_forward_rounded,
+                    color: Colors.black,
+                    size: 17,
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -568,7 +510,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 // Staggered animation widget — each text line slides up + fades in
 // ─────────────────────────────────────────────────────────────────────────────
-class _StaggeredLine extends StatelessWidget {
+class _StaggeredLine extends StatefulWidget {
   final AnimationController controller;
   final Interval interval;
   final Widget child;
@@ -580,18 +522,39 @@ class _StaggeredLine extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final fade = CurvedAnimation(parent: controller, curve: interval);
-    final slide = Tween<Offset>(
+  State<_StaggeredLine> createState() => _StaggeredLineState();
+}
+
+class _StaggeredLineState extends State<_StaggeredLine> {
+  late final CurvedAnimation _fade;
+  late final CurvedAnimation _slideCurve;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _fade = CurvedAnimation(parent: widget.controller, curve: widget.interval);
+    _slideCurve = CurvedAnimation(parent: widget.controller, curve: widget.interval);
+    _slide = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: controller, curve: interval));
+    ).animate(_slideCurve);
+  }
 
+  @override
+  void dispose() {
+    _fade.dispose();
+    _slideCurve.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (_, __) => FadeTransition(
-        opacity: fade,
-        child: SlideTransition(position: slide, child: child),
+        opacity: _fade,
+        child: SlideTransition(position: _slide, child: widget.child),
       ),
     );
   }

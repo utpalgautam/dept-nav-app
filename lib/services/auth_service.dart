@@ -37,7 +37,7 @@ class AuthService {
     required String password,
     required String name,
     required UserType userType,
-    String? branch,
+    String? department,
     String? year,
   }) async {
     if (userType == UserType.admin) {
@@ -75,7 +75,7 @@ class AuthService {
         uid: uid,
         email: email.trim(),
         name: name.trim(),
-        branch: branch?.trim(),
+        department: department?.trim(),
         year: year?.trim(),
         userType: userType,
         createdAt: now,
@@ -290,7 +290,7 @@ class AuthService {
   // ── Update Profile Details ────────────────────────────────────────────────
   Future<void> updateProfileDetails({
     required String name,
-    String? branch,
+    String? department,
     String? year,
   }) async {
     final user = _auth.currentUser;
@@ -299,7 +299,7 @@ class AuthService {
     try {
       final Map<String, dynamic> updates = {
         'name': name,
-        'branch': branch,
+        'department': department,
         'year': year,
       };
 

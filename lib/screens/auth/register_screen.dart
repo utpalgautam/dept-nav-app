@@ -22,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _branchCtrl = TextEditingController();
+  final _deptCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
 
   UserType _selectedType = UserType.student;
@@ -50,17 +50,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     UserType.staff: 'Staff',
   };
 
-  static const _branches = [
-    'Computer Science & Engineering',
-    'Electronics & Communication',
-    'Electrical Engineering',
-    'Mechanical Engineering',
-    'Civil Engineering',
-    'Chemical Engineering',
-    'Production Engineering',
-    'Architecture',
-    'Other',
-  ];
+  static const _departments = {
+    'CSE': 'Computer Science & Engineering',
+    'ECE': 'Electronics & Communication',
+    'EEE': 'Electrical Engineering',
+    'ME': 'Mechanical Engineering',
+    'CE': 'Civil Engineering',
+    'CHE': 'Chemical Engineering',
+    'PE': 'Production Engineering',
+    'ARCH': 'Architecture',
+    'Other': 'Other',
+  };
 
   static const _years = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'PG'];
 
@@ -70,12 +70,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
-    _branchCtrl.dispose();
+    _deptCtrl.dispose();
     _yearCtrl.dispose();
     super.dispose();
   }
 
-  bool get _showBranch =>
+  bool get _showDept =>
       _selectedType == UserType.student || _selectedType == UserType.faculty;
   bool get _showYear => _selectedType == UserType.student;
 
@@ -92,7 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailCtrl.text,
       password: _passwordCtrl.text,
       userType: _selectedType,
-      branch: _showBranch ? _branchCtrl.text : null,
+      department: _showDept ? _deptCtrl.text : null,
       year: _showYear ? _yearCtrl.text : null,
     );
 
@@ -314,15 +314,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
 
-                // ── Optional: Branch ──────────────────────────────
-                if (_showBranch) ...[
+                // ── Optional: Department ──────────────────────────────
+                if (_showDept) ...[
                   const SizedBox(height: 16),
-                  _buildDropdown(
-                    label: 'Branch / Department',
-                    hintText: 'Select your branch',
-                    items: _branches,
-                    controller: _branchCtrl,
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Branch is required' : null,
+                  _buildDeptDropdown(
+                    label: 'Department',
+                    hintText: 'Select your department',
+                    controller: _deptCtrl,
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Department is required' : null,
                   ),
                 ],
 
@@ -437,6 +436,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF888888)),
           items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (v) {
+            if (v != null) controller.text = v;
+          },
+          isExpanded: true,
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ],
+    );
+  }
+
+  /// Specialized dropdown for departments: shows full name, stores short code.
+  Widget _buildDeptDropdown({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF888888),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: controller.text.isEmpty ? null : controller.text,
+          validator: validator,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: const TextStyle(
+              color: Color(0xFF9E9E9E),
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Colors.black12, width: 1),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF888888)),
+          items: _departments.entries.map((e) => DropdownMenuItem(
+            value: e.key,   // store short code
+            child: Text(e.value), // display full name
+          )).toList(),
           onChanged: (v) {
             if (v != null) controller.text = v;
           },
