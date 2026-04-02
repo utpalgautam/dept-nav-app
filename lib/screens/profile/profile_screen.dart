@@ -345,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       Positioned(
-        bottom: MediaQuery.of(context).padding.bottom > 0 ? 34 : 26,
+        bottom: MediaQuery.of(context).padding.bottom + 10,
         left: 24,
         right: 24,
         child: CustomBottomNavBar(

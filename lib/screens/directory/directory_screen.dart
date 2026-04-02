@@ -201,7 +201,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
           // Floating Bottom Nav Bar
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom > 0 ? 34 : 26,
+            bottom: MediaQuery.of(context).padding.bottom + 10,
             left: 24,
             right: 24,
             child: CustomBottomNavBar(

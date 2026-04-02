@@ -62,17 +62,18 @@ class _HomeScreenState extends State<HomeScreen> {
           final double screenHeight = constraints.maxHeight;
           final double screenWidth = constraints.maxWidth;
           
-          // Adjusted hero area to nudge the white card slightly up
-          final double heroHeight = screenHeight < 700 ? screenHeight * 0.54 : screenHeight * 0.52;
+          // Nudged slightly to prevent overflow on very small devices
+          final double heroHeight = screenHeight < 680 ? screenHeight * 0.40 : screenHeight * 0.48;
           
           // White card overlaps image
-          const double cardOverlap = 40.0;
+          const double cardOverlap = 23.0;
           
           // Search bar dimensions
           const double searchH = 54.0;
           
           // Search bar floats entirely above the boundary
-          final double searchTop = heroHeight - cardOverlap - searchH - 12;
+          // Nudge up or down based on screen height
+          final double searchTop = heroHeight - cardOverlap - searchH - (screenHeight < 700 ? 8 : 14);
 
           return Stack(
             children: [
@@ -104,13 +105,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 100),
+                    padding: EdgeInsets.fromLTRB(20, screenHeight < 700 ? 10 : 20, 20, 95), 
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         _buildMapCard(screenHeight),
-                        const SizedBox(height: 18),
+                        SizedBox(height: screenHeight < 700 ? 12 : 18),
                         _buildQuickActions(),
                       ],
                     ),
@@ -129,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // ── 4. Fixed Nav Bar ───────────────────────────────────────
               Positioned(
-                bottom: 24,
+                bottom: MediaQuery.of(context).padding.bottom + 10,
                 left: 24,
                 right: 24,
                 child: CustomBottomNavBar(
@@ -148,6 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeroImage(BuildContext context, String firstName, String? profileImageUrl) {
     final auth = context.watch<app_auth.AuthProvider>();
     final isGuest = auth.isGuest;
+    final double screenHeight = MediaQuery.of(context).size.height;
 
     return Stack(
       fit: StackFit.expand,
@@ -183,20 +185,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       isGuest ? 'Welcome,' : 'Welcome back,',
-                      style: const TextStyle(
-                        color: Color(0xFF555555),
-                        fontSize: 15,
+                      style: TextStyle(
+                        color: const Color(0xFF555555),
+                        fontSize: screenHeight < 700 ? 14 : 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       isGuest ? 'Hello User!' : 'Hello, $firstName!',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.black,
-                        fontSize: 28,
+                        fontSize: screenHeight < 700 ? 24 : 32,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
+                        letterSpacing: -0.6,
                       ),
                     ),
                   ],
@@ -289,44 +291,44 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Row(
-          children: [
-            SizedBox(width: 18),
-            Icon(Icons.search, color: Colors.black54, size: 22),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Search cabins, halls, labs...',
-                style: TextStyle(
-                  color: Colors.black45,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
+      child: AnimatedRainbowBorder(
+        borderRadius: 30,
+        borderWidth: 2,
+        backgroundColor: Colors.white,
+        child: Container(
+          height: 50, // Controlled by AnimatedRainbowBorder's child container
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: const Row(
+            children: [
+              Icon(Icons.search, color: Colors.black54, size: 22),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Search cabins, halls, labs...',
+                  style: TextStyle(
+                    color: Colors.black45,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(width: 18),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ── Explore NITC Map card ─────────────────────────────────────────────────
   Widget _buildMapCard(double screenHeight) {
-    // Dynamic map card height
-    final double cardH = screenHeight < 700 ? 150 : 170;
+    // Dynamic map card height: shrink more on very small screens
+    double cardH;
+    if (screenHeight < 650) {
+      cardH = 120; // Even smaller
+    } else if (screenHeight < 750) {
+      cardH = 140;
+    } else {
+      cardH = 175;
+    }
     return GestureDetector(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const ExploreMapScreen())),
@@ -471,13 +473,17 @@ class _HomeScreenState extends State<HomeScreen> {
     required String label,
     required VoidCallback onTap,
   }) {
+    // Scale icons based on screen width/height
+    final bool isSmall = MediaQuery.of(context).size.height < 700;
+    final double iconSize = isSmall ? 44 : 56;
+    
     return Column(
       children: [
         GestureDetector(
           onTap: onTap,
           child: Container(
-            width: 56, // Smaller as requested
-            height: 56,
+            width: iconSize,
+            height: iconSize,
             decoration: BoxDecoration(
               color: const Color(0xFFB8C8E8),
               shape: BoxShape.circle,
@@ -489,15 +495,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            child: Icon(icon, color: const Color(0xFF3A3A5C), size: 24),
+            child: Icon(icon, color: const Color(0xFF4A4A4A), size: isSmall ? 22 : 26),
           ),
         ),
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 12,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: isSmall ? 11 : 13,
             fontWeight: FontWeight.w500,
           ),
         ),
