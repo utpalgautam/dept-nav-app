@@ -339,24 +339,15 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
           // ── Zoom Controls (right-side vertical stack) ────────────────────
           Positioned(
             right: 12,
-            bottom: 160,
+            bottom: 120, // Adjusted for removed re-center button
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _MapFloatingButton(icon: Icons.add, onTap: _zoomIn),
-                const SizedBox(height: 8),
-                _DividerLine(),
-                const SizedBox(height: 8),
-                _MapFloatingButton(icon: Icons.remove, onTap: _zoomOut),
+                _MapFloatingButton(icon: Icons.add, onTap: _zoomIn, isCircle: false),
+                const SizedBox(height: 12),
+                _MapFloatingButton(icon: Icons.remove, onTap: _zoomOut, isCircle: false),
               ],
             ),
-          ),
-
-          // ── Recenter Button (bottom-left) ────────────────────────────────
-          Positioned(
-            bottom: 40,
-            left: 16,
-            child: _RecenterButton(onTap: _animateToUser),
           ),
         ],
       ),
@@ -371,40 +362,34 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
 class _MapFloatingButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final bool isCircle;
 
   const _MapFloatingButton({
     required this.icon,
     required this.onTap,
+    this.isCircle = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
+      color: Colors.black,
+      shape: isCircle 
+        ? const CircleBorder() 
+        : RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       shadowColor: Colors.black54,
       child: InkWell(
-        customBorder: const CircleBorder(),
+        customBorder: isCircle 
+          ? const CircleBorder() 
+          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         onTap: onTap,
         child: SizedBox(
           width: 48,
           height: 48,
-          child: Icon(icon, color: Colors.black87, size: 22),
+          child: Icon(icon, color: Colors.white, size: 22),
         ),
       ),
-    );
-  }
-}
-
-// Zoom divider line
-class _DividerLine extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 1,
-      color: Colors.white24,
     );
   }
 }
@@ -441,45 +426,5 @@ class _CompassButton extends StatelessWidget {
   }
 }
 
-// Re-centre pill button (Google Maps style)
-class _RecenterButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _RecenterButton({required this.onTap});
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(28),
-      elevation: 4,
-      shadowColor: Colors.black54,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(28),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Transform.rotate(
-                angle: -0.785, // 45° tilt = navigation arrow
-                child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 18),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Re-centre',
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 

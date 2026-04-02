@@ -468,6 +468,24 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
         ),
         belowLayerId: "3d-buildings",
       );
+
+      // 5. Add Connection Line (User to Route Start)
+      await _mapController!.addSource("route-connection-source",
+          const GeojsonSourceProperties(data: {"type": "FeatureCollection", "features": []}));
+
+      await _mapController!.addLayer(
+        "route-connection-source",
+        "route-connection",
+        const LineLayerProperties(
+          lineColor: '#3b82f6',
+          lineWidth: 4.0,
+          lineOpacity: 0.5,
+          lineDasharray: [0.2, 2.0],
+          lineJoin: 'round',
+          lineCap: 'round',
+        ),
+        belowLayerId: "user-location-halo", // Behind the user dot
+      );
     } catch (e) {
       debugPrint("Error initializing route layers: $e");
     }
@@ -608,6 +626,20 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
           await _mapController!.setGeoJsonSource("route-traveled-source",
               {"type": "FeatureCollection", "features": []});
         }
+      }
+
+      // 3. Update Connection Line (User to Route Start)
+      if (provider.snappedPosition != null && points.isNotEmpty) {
+        final connectionPoints = [provider.snappedPosition!, points.first];
+        final connectionGeoJson = NavigationUtils.toGeoJson(connectionPoints);
+        await _mapController!.setGeoJsonSource("route-connection-source", connectionGeoJson);
+      } else if (_targetPosition != null && points.isNotEmpty) {
+        final connectionPoints = [_targetPosition!, points.first];
+        final connectionGeoJson = NavigationUtils.toGeoJson(connectionPoints);
+        await _mapController!.setGeoJsonSource("route-connection-source", connectionGeoJson);
+      } else {
+        await _mapController!.setGeoJsonSource("route-connection-source",
+            {"type": "FeatureCollection", "features": []});
       }
 
       if (!provider.isNavigating) {
