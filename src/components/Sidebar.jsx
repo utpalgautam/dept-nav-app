@@ -8,7 +8,8 @@ import {
   LuRoute,
   LuGraduationCap,
   LuFlaskConical,
-  LuLogOut
+  LuLogOut,
+  LuInfo
 } from 'react-icons/lu';
 import { logoutAdmin } from '../services/authService';
 
@@ -26,6 +27,7 @@ const Sidebar = () => {
     if (path.startsWith('/halls-labs')) return 'H';
     if (path.startsWith('/users')) return 'U';
     if (path.startsWith('/routing')) return 'R';
+    if (path.startsWith('/reports')) return 'Q';
     return 'D';
   };
 
@@ -79,6 +81,11 @@ const Sidebar = () => {
             <li>
               <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                 <LuUsers />
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/reports" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <LuInfo title="Reports" />
               </NavLink>
             </li>
           </ul>

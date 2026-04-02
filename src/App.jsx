@@ -9,6 +9,7 @@ import OutdoorMarkersPage from './pages/OutdoorMarkersPage';
 import HallsLabsPage from './pages/HallsLabsPage';
 import InteractiveRoutePage from './pages/InteractiveRoutePage';
 import ProfilePage from './pages/ProfilePage';
+import ReportsPage from './pages/ReportsPage';
 import AdminLogin from './pages/Auth/AdminLogin';
 import AdminRegister from './pages/Auth/AdminRegister';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -62,6 +63,7 @@ function AppRoutes() {
                 <Route path="/routing" element={<InteractiveRoutePage />} />
                 <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/outdoor-markers" element={<OutdoorMarkersPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Routes>
             </div>
