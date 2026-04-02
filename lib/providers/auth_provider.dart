@@ -70,7 +70,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String name,
     required UserType userType,
-    String? branch,
+    String? department,
     String? year,
   }) async {
     _setLoading(true);
@@ -81,7 +81,7 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         name: name,
         userType: userType,
-        branch: branch,
+        department: department,
         year: year,
       );
       notifyListeners();
@@ -161,7 +161,7 @@ class AuthProvider extends ChangeNotifier {
   // ── Update Profile Details ────────────────────────────────────────────────
   Future<bool> updateProfile({
     required String name,
-    String? branch,
+    String? department,
     String? year,
   }) async {
     _setLoading(true);
@@ -169,13 +169,13 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.updateProfileDetails(
         name: name,
-        branch: branch,
+        department: department,
         year: year,
       );
       if (_currentUser != null) {
         _currentUser = _currentUser!.copyWith(
           name: name,
-          branch: branch,
+          department: department,
           year: year,
         );
         notifyListeners();

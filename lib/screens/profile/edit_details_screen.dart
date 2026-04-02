@@ -18,7 +18,7 @@ class _EditDetailsScreenState extends State<EditDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameCtrl;
   late TextEditingController _emailCtrl;
-  late TextEditingController _branchCtrl;
+  late TextEditingController _deptCtrl;
   late TextEditingController _yearCtrl;
   bool _isSaving = false;
 
@@ -31,7 +31,7 @@ class _EditDetailsScreenState extends State<EditDetailsScreen> {
     final user = context.read<app_auth.AuthProvider>().currentUser;
     _nameCtrl = TextEditingController(text: user?.name ?? '');
     _emailCtrl = TextEditingController(text: user?.email ?? '');
-    _branchCtrl = TextEditingController(text: user?.branch ?? '');
+    _deptCtrl = TextEditingController(text: user?.department ?? '');
     _yearCtrl = TextEditingController(text: user?.year ?? '');
   }
 
@@ -39,7 +39,7 @@ class _EditDetailsScreenState extends State<EditDetailsScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
-    _branchCtrl.dispose();
+    _deptCtrl.dispose();
     _yearCtrl.dispose();
     super.dispose();
   }
@@ -100,7 +100,7 @@ class _EditDetailsScreenState extends State<EditDetailsScreen> {
     final auth = context.read<app_auth.AuthProvider>();
     final success = await auth.updateProfile(
       name: _nameCtrl.text.trim(),
-      branch: _branchCtrl.text.trim().isEmpty ? null : _branchCtrl.text.trim(),
+      department: _deptCtrl.text.trim().isEmpty ? null : _deptCtrl.text.trim(),
       year: _yearCtrl.text.trim().isEmpty ? null : _yearCtrl.text.trim(),
     );
 
@@ -205,11 +205,7 @@ class _EditDetailsScreenState extends State<EditDetailsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      CustomTextField(
-                        label: 'Branch / Department',
-                        hintText: 'e.g. Computer Science',
-                        controller: _branchCtrl,
-                      ),
+                      _buildDeptDropdown(),
                       const SizedBox(height: 20),
 
                       CustomTextField(
@@ -325,6 +321,77 @@ class _EditDetailsScreenState extends State<EditDetailsScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  static const _departments = {
+    'CSE': 'Computer Science & Engineering',
+    'ECE': 'Electronics & Communication',
+    'EEE': 'Electrical Engineering',
+    'ME': 'Mechanical Engineering',
+    'CE': 'Civil Engineering',
+    'CHE': 'Chemical Engineering',
+    'PE': 'Production Engineering',
+    'ARCH': 'Architecture',
+    'Other': 'Other',
+  };
+
+  Widget _buildDeptDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Department',
+          style: TextStyle(
+            color: Color(0xFF888888),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _deptCtrl.text.isEmpty ? null : _deptCtrl.text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Select your department',
+            hintStyle: const TextStyle(
+              color: Color(0xFF9E9E9E),
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Colors.black12, width: 1),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF888888)),
+          items: _departments.entries.map((e) => DropdownMenuItem(
+            value: e.key,
+            child: Text(e.value),
+          )).toList(),
+          onChanged: (v) {
+            if (v != null) setState(() => _deptCtrl.text = v);
+          },
+          isExpanded: true,
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(16),
         ),
       ],
     );
