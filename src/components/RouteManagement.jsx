@@ -23,6 +23,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
 
   const [viewMode, setViewMode] = useState('map');
   const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [viewBoxData, setViewBoxData] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   // Active tab = active mode
@@ -45,6 +46,10 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const isDragging = useRef(false);
   const dragStart = useRef(null);
+
+  const isPanning = useRef(false);
+  const panStartCoords = useRef({ x: 0, y: 0 });
+  const [isPanningState, setIsPanningState] = useState(false);
 
   // Route testing
   const [routeStartNode, setRouteStartNode] = useState('');
@@ -109,6 +114,8 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
 
   // ── Data loading ──────────────────────────────────────
   useEffect(() => {
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
     if (!buildingId || floorNumber === '' || floorNumber === null || floorNumber === undefined) {
       setGraph({ nodes: [], edges: [] });
       return;
@@ -324,9 +331,14 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
 
   // ── Map click ─────────────────────────────────────────
   const handleMapClick = (e) => {
-    if (isDragging.current) return;
+    if (isDragging.current) {
+      isDragging.current = false;
+      return;
+    }
     const c = getSvgCoords(e);
     if (!c) return;
+    
+    // ... rest of the logic ...
 
     if (activeTab === 'node') {
       // Place a pending node — show creation form
@@ -437,6 +449,36 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
     document.addEventListener('mouseup', onUp);
   }, [activeTab, getSvgCoords, autoSave, getDynamicSnap, viewBoxData]);
 
+  // ── Panning handlers ──────────────────────────────────
+  const onPanMove = useCallback((e) => {
+    if (!isPanning.current) return;
+    const dx = e.clientX - panStartCoords.current.x;
+    const dy = e.clientY - panStartCoords.current.y;
+
+    if (Math.abs(dx - offset.x) > 3 || Math.abs(dy - offset.y) > 3) {
+      isDragging.current = true;
+    }
+    setOffset({ x: dx, y: dy });
+  }, [offset]);
+
+  const onPanEnd = useCallback(() => {
+    isPanning.current = false;
+    setIsPanningState(false);
+    document.removeEventListener('mousemove', onPanMove);
+    document.removeEventListener('mouseup', onPanEnd);
+  }, [onPanMove]);
+
+  const onPanStart = (e) => {
+    if (e.button !== 0) return; // Left click only
+    isPanning.current = true;
+    setIsPanningState(true);
+    panStartCoords.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    isDragging.current = false;
+
+    document.addEventListener('mousemove', onPanMove);
+    document.addEventListener('mouseup', onPanEnd);
+  };
+
   // ── Node actions ──────────────────────────────────────
   const handleSaveNode = () => {
     if (!selectedNodeId || !editLabel.trim()) return;
@@ -468,9 +510,9 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
   // ── SVG rendering ─────────────────────────────────────
   const renderNode = (node, isGV) => {
     const color = COLORS[node.type] || '#3b82f6';
-    const r = isGV ? viewBoxData.width * 0.015 : (viewBoxData.width * 0.008) / scale;
-    const sw = isGV ? viewBoxData.width * 0.003 : (viewBoxData.width * 0.002) / scale;
-    const fs = isGV ? viewBoxData.width * 0.025 : (viewBoxData.width * 0.015) / scale;
+    const r = isGV ? viewBoxData.width * 0.015 : (viewBoxData.width * 0.012) / Math.pow(scale, 0.4);
+    const sw = isGV ? viewBoxData.width * 0.003 : (viewBoxData.width * 0.003) / Math.pow(scale, 0.4);
+    const fs = isGV ? viewBoxData.width * 0.025 : (viewBoxData.width * 0.02) / Math.pow(scale, 0.4);
     const isSel = node.id === selectedNodeId;
     const isFirst = firstNodeForEdge?.id === node.id;
 
@@ -505,7 +547,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
       <line key={edge.id}
         x1={f.x} y1={f.y} x2={t.x} y2={t.y}
         stroke={isGV ? '#94a3b8' : '#3b82f6'}
-        strokeWidth={isGV ? viewBoxData.width * 0.005 : (viewBoxData.width * 0.003) / scale}
+        strokeWidth={isGV ? viewBoxData.width * 0.005 : (viewBoxData.width * 0.004) / Math.pow(scale, 0.4)}
         strokeLinecap="round" opacity={0.65}
         style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
         onClick={(e) => { e.stopPropagation(); handleDeleteEdge(edge.id); }}
@@ -537,10 +579,11 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
               className="ir-map-viewport"
               ref={viewportRef}
               onClick={handleMapClick}
+              onMouseDown={onPanStart}
               style={{
-                transform: `scale(${scale})`,
+                transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
                 transformOrigin: '50% 50%',
-                cursor: activeTab === 'node' || activeTab === 'edge' ? 'crosshair' : 'default',
+                cursor: isPanningState ? 'grabbing' : (activeTab === 'node' || activeTab === 'edge' ? 'crosshair' : 'grab'),
                 position: 'relative',
                 background: viewMode === 'graph' ? '#f8fafc' : 'transparent'
               }}
@@ -571,7 +614,7 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
                     <polyline
                       points={computedRoute.map(n => `${n.x},${n.y}`).join(' ')}
                       stroke={viewMode === 'graph' ? '#1E88E5' : '#fbbf24'}
-                      strokeWidth={viewMode === 'graph' ? viewBoxData.width * 0.006 : (viewBoxData.width * 0.006) / scale}
+                      strokeWidth={viewMode === 'graph' ? viewBoxData.width * 0.006 : (viewBoxData.width * 0.007) / Math.pow(scale, 0.4)}
                       strokeLinejoin="round"
                       fill="none"
                     />
@@ -609,15 +652,15 @@ const RouteManagement = ({ buildingId, floorNumber }) => {
         <div className="ir-side-header">
           <div className="ige-tab-bar" style={{ padding: 0 }}>
             <button className={`ige-tab-btn ${activeTab === 'node' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('node'); setFirstNodeForEdge(null); clearRoute(); }}>
+              onClick={() => { setActiveTab('node'); setFirstNodeForEdge(null); clearRoute(); setScale(1); setOffset({ x: 0, y: 0 }); }}>
               Add Node
             </button>
             <button className={`ige-tab-btn ${activeTab === 'edge' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('edge'); setPendingNode(null); setSelectedNodeId(null); clearRoute(); }}>
+              onClick={() => { setActiveTab('edge'); setPendingNode(null); setSelectedNodeId(null); clearRoute(); setScale(1); setOffset({ x: 0, y: 0 }); }}>
               Add Edge
             </button>
             <button className={`ige-tab-btn ${activeTab === 'route' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('route'); setPendingNode(null); setSelectedNodeId(null); setFirstNodeForEdge(null); }}>
+              onClick={() => { setActiveTab('route'); setPendingNode(null); setSelectedNodeId(null); setFirstNodeForEdge(null); setScale(1); setOffset({ x: 0, y: 0 }); }}>
               Test Route
             </button>
           </div>
