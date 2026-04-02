@@ -57,70 +57,89 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
-      body: Stack(
-        children: [
-          // ── 1. Hero image – behind everything ─────────────────────────
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: heroHeight,
-            child: _buildHeroImage(context, firstName, profileImageUrl),
-          ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double screenHeight = constraints.maxHeight;
+          final double screenWidth = constraints.maxWidth;
+          
+          // Adaptive hero height: 45% for normal screens, more for very short ones to keep content readable
+          final double heroHeight = screenHeight < 600 ? screenHeight * 0.55 : screenHeight * 0.48;
+          
+          // White card overlaps image
+          const double cardOverlap = 40.0;
+          
+          // Search bar dimensions
+          const double searchH = 54.0;
+          
+          // Search bar floats entirely above the boundary
+          final double searchTop = heroHeight - cardOverlap - searchH - 12;
 
-          // ── 2. White card – overlaps image, rounded top ───────────────
-          Positioned(
-            top: heroHeight - cardOverlap + 10,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.backgroundLight,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x28000000),
-                    blurRadius: 12,
-                    offset: Offset(0, -4),
-                  ),
-                ],
+          return Stack(
+            children: [
+              // ── 1. Hero image ──────────────────────────────────────────
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: heroHeight,
+                child: _buildHeroImage(context, firstName, profileImageUrl),
               ),
-              // Content starts after the search bar (searchH/2 + a gap)
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildMapCard(),
-                    const SizedBox(height: 22),
-                    _buildQuickActions(),
-                  ],
+
+              // ── 2. Content Card ────────────────────────────────────────
+              Positioned(
+                top: heroHeight - cardOverlap,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 10,
+                        offset: Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    // More bottom padding to clear the FAB-styled nav bar
+                    padding: const EdgeInsets.fromLTRB(20, 42, 20, 140),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMapCard(),
+                        const SizedBox(height: 24),
+                        _buildQuickActions(),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // ── 3. Search bar – floats at the image/card boundary ─────────
-          Positioned(
-            top: searchTop,
-            left: 20,
-            right: 20,
-            height: searchH,
-            child: _buildSearchBar(),
-          ),
+              // ── 3. Search Bar ──────────────────────────────────────────
+              Positioned(
+                top: searchTop,
+                left: 20,
+                right: 20,
+                height: searchH,
+                child: _buildSearchBar(),
+              ),
 
-          // ── 4. Navbar – always fixed at screen bottom ─────────────────
-          Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
-            child: CustomBottomNavBar(
-              currentIndex: 0,
-              onTap: _onNavItemTapped,
-            ),
-          ),
-        ],
+              // ── 4. Fixed Nav Bar ───────────────────────────────────────
+              Positioned(
+                bottom: 24,
+                left: 24,
+                right: 24,
+                child: CustomBottomNavBar(
+                  currentIndex: 0,
+                  onTap: _onNavItemTapped,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -399,7 +418,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.w600)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        // Use Wrap for better responsiveness on small/narrow screens
+        // Row for balanced spacing between items
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

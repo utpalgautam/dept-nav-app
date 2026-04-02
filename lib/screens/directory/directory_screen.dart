@@ -191,9 +191,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                   sliver: _buildListBody(),
                 ),
 
-                // Spacing at the bottom for the floating navigation bar
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 120),
+                // Dynamic padding based on bottom nav bar position
+                SliverToBoxAdapter(
+                  child: SizedBox(height: MediaQuery.of(context).padding.bottom + 110),
                 ),
               ],
             ),
@@ -201,7 +201,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
 
           // Floating Bottom Nav Bar
           Positioned(
-            bottom: 30,
+            bottom: MediaQuery.of(context).padding.bottom > 0 ? 34 : 26,
             left: 24,
             right: 24,
             child: CustomBottomNavBar(

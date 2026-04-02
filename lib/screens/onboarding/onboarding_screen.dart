@@ -357,7 +357,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: Text(
                 page.subtitle,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: MediaQuery.of(context).size.width * 0.038, // Dynamic font size
                   color: Colors.white.withValues(alpha: 0.85),
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w400,
@@ -387,7 +387,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return RichText(
       text: TextSpan(
         style: TextStyle(
-          fontSize: 36,
+          fontSize: MediaQuery.of(context).size.width * 0.09, // Dynamic font size
           color: Colors.white,
           fontFamily: 'Poppins',
           height: 1.15,

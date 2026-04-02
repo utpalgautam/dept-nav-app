@@ -989,7 +989,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                 if (navProvider.isNavigating)
                   Positioned(
                     right: 16,
-                    bottom: 160,
+                    bottom: MediaQuery.of(context).padding.bottom + 150,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1011,7 +1011,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                 // ── Recenter Button (bottom-left) ──────────────────────────
                 if (!_isCentered)
                   Positioned(
-                    bottom: navProvider.isNavigating ? 140 : 160,
+                    bottom: MediaQuery.of(context).padding.bottom + (navProvider.isNavigating ? 140 : 160),
                     left: 16,
                     child: _RecenterPill(onTap: _recenter),
                   ),

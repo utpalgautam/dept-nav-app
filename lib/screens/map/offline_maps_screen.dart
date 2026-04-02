@@ -211,19 +211,21 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
                 ),
 
 
-                // --- List Body ---
+                // Dynamic padding based on bottom nav bar position
                 SliverPadding(
-                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 100.0),
+                  padding: EdgeInsets.only(
+                      left: 24.0, 
+                      right: 24.0, 
+                      bottom: MediaQuery.of(context).padding.bottom + 110),
                   sliver: _buildBuildingsList(),
                 ),
               ],
             ),
           ),
 
-
           // Floating Bottom Nav Bar
           Positioned(
-            bottom: 30,
+            bottom: MediaQuery.of(context).padding.bottom > 0 ? 34 : 26,
             left: 24,
             right: 24,
             child: CustomBottomNavBar(

@@ -677,7 +677,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
                   ),
                   // Toggle buttons: top-right, below the header
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + 140,
+                    top: MediaQuery.of(context).padding.top + 150, // Slightly more gap to clear the instruction box
                     right: 20,
                     child: _buildToggleButtons(),
                   ),
@@ -1255,7 +1255,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
           children: [
             _buildPdrStatusBox(),
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),

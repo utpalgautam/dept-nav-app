@@ -339,7 +339,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
           // ── Zoom Controls (right-side vertical stack) ────────────────────
           Positioned(
             right: 12,
-            bottom: 120, // Adjusted for removed re-center button
+            bottom: MediaQuery.of(context).padding.bottom + 30, // Dynamic positioning
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

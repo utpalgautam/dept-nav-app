@@ -190,8 +190,7 @@ class _IndoorNavigationSetupScreenState
               child: _isLoadingBuildings
                   ? const Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                      padding:
-                          const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 120.0),
+                      padding: EdgeInsets.fromLTRB(24.0, 24.0, 24.0, MediaQuery.of(context).padding.bottom + 100.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -315,7 +314,7 @@ class _IndoorNavigationSetupScreenState
             ),
           ),
           Positioned(
-            bottom: 30,
+            bottom: MediaQuery.of(context).padding.bottom + 10,
             left: 24,
             right: 24,
             child: CustomBottomNavBar(

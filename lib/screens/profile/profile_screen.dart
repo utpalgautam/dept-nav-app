@@ -338,13 +338,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 140), // Bottom padding for nav bar
+              // Dynamic padding based on bottom nav bar position
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 110),
             ],
           ),
         ),
       ),
       Positioned(
-        bottom: 30,
+        bottom: MediaQuery.of(context).padding.bottom > 0 ? 34 : 26,
         left: 24,
         right: 24,
         child: CustomBottomNavBar(
