@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "816397169014-i508pkpf6iq69kad7d0mik4o7l9kd3on.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nitc.dept_nav_app",
+            "certificate_hash": "028ddd2747590100ae3f1989e0849f6acf2d3ce4"
+          }
+        },
+        {
           "client_id": "816397169014-q8nhdsjup6bb2uq8cn68j6q0837nh564.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
