@@ -62,8 +62,8 @@ class _HomeScreenState extends State<HomeScreen> {
           final double screenHeight = constraints.maxHeight;
           final double screenWidth = constraints.maxWidth;
           
-          // Adaptive hero height: 45% for normal screens, more for very short ones to keep content readable
-          final double heroHeight = screenHeight < 600 ? screenHeight * 0.55 : screenHeight * 0.48;
+          // Adjusted hero area to nudge the white card slightly up
+          final double heroHeight = screenHeight < 700 ? screenHeight * 0.54 : screenHeight * 0.52;
           
           // White card overlaps image
           const double cardOverlap = 40.0;
@@ -103,14 +103,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  child: SingleChildScrollView(
-                    // More bottom padding to clear the FAB-styled nav bar
-                    padding: const EdgeInsets.fromLTRB(20, 42, 20, 140),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 100),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        _buildMapCard(),
-                        const SizedBox(height: 24),
+                        _buildMapCard(screenHeight),
+                        const SizedBox(height: 18),
                         _buildQuickActions(),
                       ],
                     ),
@@ -324,13 +324,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Explore NITC Map card ─────────────────────────────────────────────────
-  Widget _buildMapCard() {
+  Widget _buildMapCard(double screenHeight) {
+    // Dynamic map card height
+    final double cardH = screenHeight < 700 ? 150 : 170;
     return GestureDetector(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const ExploreMapScreen())),
       child: Container(
         width: double.infinity,
-        height: 180,
+        height: cardH,
         decoration: BoxDecoration(
           color: AppColors.cardDark,
           borderRadius: BorderRadius.circular(36),
