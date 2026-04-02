@@ -9,6 +9,8 @@ class TurnByTurnWidget extends StatelessWidget {
   final String? nextInstruction;
   final int? nextSign;
   final bool isSpeaking;
+  /// True when a turn is ≤ 15 m away — highlights the icon box urgency colour.
+  final bool isUrgent;
 
   const TurnByTurnWidget({
     super.key,
@@ -19,6 +21,7 @@ class TurnByTurnWidget extends StatelessWidget {
     this.nextInstruction,
     this.nextSign,
     this.isSpeaking = false,
+    this.isUrgent = false,
   });
 
   @override
@@ -44,12 +47,15 @@ class TurnByTurnWidget extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Direction Icon (Black Box)
-                Container(
+                // Direction Icon — turns orange/red when turn is imminent
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: Colors.black,
+                    color: isUrgent
+                        ? const Color(0xFFE15F00) // burnt-orange urgency
+                        : Colors.black,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(

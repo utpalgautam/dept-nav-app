@@ -13,6 +13,8 @@ import '../map/offline_maps_screen.dart';
 import 'change_password_screen.dart';
 import 'recent_searches_screen.dart';
 import 'edit_details_screen.dart';
+import 'report_issue_screen.dart';
+import 'my_reports_screen.dart';
 import '../../main.dart';
 import '../../providers/security_provider.dart';
 
@@ -179,6 +181,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.history,
                   ),
                 ),
+                const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ReportIssueScreen(),
+                      ),
+                    );
+                  },
+                  child: _buildListTile(
+                    title: 'Report an Issue',
+                    icon: Icons.report_problem_outlined,
+                  ),
+                ),
+                const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MyReportsScreen(),
+                      ),
+                    );
+                  },
+                  child: _buildListTile(
+                    title: 'My Reports',
+                    icon: Icons.assignment_outlined,
+                  ),
+                ),
               ]),
               const SizedBox(height: 16),
               
@@ -204,12 +236,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return _buildListTile(
                       title: 'PIN Lock',
                       icon: Icons.pin_rounded,
-                      trailing: Switch(
-                        value: security.isDeviceLockEnabled,
-                        activeColor: Colors.white,
-                        activeTrackColor: Colors.black,
-                        onChanged: (value) async {
-                          if (value) {
+                      trailing: GestureDetector(
+                        onTap: () async {
+                          final newValue = !security.isDeviceLockEnabled;
+                          if (newValue) {
                             final success = await security.authenticate();
                             if (success) {
                               security.setDeviceLockEnabled(true);
@@ -221,6 +251,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             }
                           }
                         },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 44,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: security.isDeviceLockEnabled ? Colors.black : const Color(0xFFE5E7EB),
+                          ),
+                          child: AnimatedAlign(
+                            duration: const Duration(milliseconds: 200),
+                            alignment: security.isDeviceLockEnabled ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              width: 20,
+                              height: 20,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 1,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -329,8 +388,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(String name, String subtitle) {
+    // context.watch ensures this rebuilds when the Firestore stream fires
     final profileUrl =
-        context.read<app_auth.AuthProvider>().currentUser?.profileImageUrl;
+        context.watch<app_auth.AuthProvider>().currentUser?.profileImageUrl;
     final ImageProvider? profileImage = _imageFile != null
         ? FileImage(_imageFile!)
         : _getProfileImageProvider(profileUrl);

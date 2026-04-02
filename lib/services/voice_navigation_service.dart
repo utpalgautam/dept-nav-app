@@ -2,6 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Voice tier tracks how far along the three-announcement sequence we are
+/// for the current approaching turn instruction.
+enum _VoiceTier {
+  none,  // Not yet spoken for this turn
+  early, // Spoken "In ~50m, turn right" (40–60m zone)
+  near,  // Spoken "Turn right" (≤15m zone)
+  now,   // Spoken "Turn now" (≤5m zone)
+}
+
 /// A cross-platform service that handles voice navigation instructions using flutter_tts.
 class VoiceNavigationService {
   static final VoiceNavigationService _instance = VoiceNavigationService._internal();
@@ -12,8 +21,10 @@ class VoiceNavigationService {
 
   late FlutterTts _flutterTts;
   bool _isVoiceEnabled = true;
-  String? _lastSpokenInstruction;
-  double? _lastSpokenDistance;
+
+  // Tier-based deduplication: tracks how far we've announced for the current turn
+  _VoiceTier _lastSpokenTier = _VoiceTier.none;
+  int _lastTrackedInstructionIndex = -1;
 
   bool get isVoiceEnabled => _isVoiceEnabled;
   bool _isSpeaking = false;
@@ -75,7 +86,7 @@ class VoiceNavigationService {
     }
   }
 
-  /// Speaks a simple text message.
+  /// Speaks a simple text message immediately (bypasses tier tracking).
   void speak(String text) async {
     if (!_isVoiceEnabled) return;
 
@@ -95,54 +106,54 @@ class VoiceNavigationService {
     }
   }
 
-  /// Logic for natural timing of navigation instructions.
-  /// Decides whether to speak based on the current instruction and distance.
-  void speakNavigationInstruction(String instruction, double distanceInMeters) {
+  /// Google Maps–style 3-tier voice guidance.
+  ///
+  /// Tiers (in escalating order):
+  ///   early → "In ~50 meters, turn right"  (triggered in the 40–60 m window)
+  ///   near  → "Turn right"                  (triggered when ≤ 15 m)
+  ///   now   → "Turn now"                    (triggered when ≤ 5 m)
+  ///
+  /// Each tier fires AT MOST ONCE per instruction index. Once spoken it never
+  /// repeats unless the instruction advances (new turning point).
+  void speakNavigationInstruction(
+      String turnText, double distToTurn, int instructionIndex) {
     if (!_isVoiceEnabled) return;
 
-    // 1. Threshold-based triggers
-    bool shouldSpeak = false;
-    String speechText = "";
-
-    // Arrival detection
-    if (distanceInMeters < 5.0 && _lastSpokenDistance != 0) {
-      speechText = instruction; // "You have arrived"
-      shouldSpeak = true;
-      _lastSpokenDistance = 0;
-    } 
-    // Immediate turn/Next step
-    else if (distanceInMeters < 15.0 && (_lastSpokenDistance == null || _lastSpokenDistance! > 15.0)) {
-      speechText = instruction; // e.g., "Turn right"
-      shouldSpeak = true;
-      _lastSpokenDistance = 15.0;
-    }
-    // "In 20 meters..."
-    else if (distanceInMeters <= 25.0 && distanceInMeters > 15.0 && (_lastSpokenDistance == null || _lastSpokenDistance! > 25.0)) {
-       speechText = "In ${distanceInMeters.toStringAsFixed(0)} meters, $instruction";
-       shouldSpeak = true;
-       _lastSpokenDistance = 25.0;
-    }
-    // "In 50 meters..."
-    else if (distanceInMeters <= 55.0 && distanceInMeters > 45.0 && (_lastSpokenDistance == null || _lastSpokenDistance! > 55.0)) {
-       speechText = "In 50 meters, $instruction";
-       shouldSpeak = true;
-       _lastSpokenDistance = 55.0;
-    }
-    // New instruction (immediate alert if far away)
-    else if (instruction != _lastSpokenInstruction && distanceInMeters > 60.0) {
-       speechText = "In ${distanceInMeters.toStringAsFixed(0)} meters, $instruction";
-       shouldSpeak = true;
-       _lastSpokenDistance = distanceInMeters;
+    // Reset tier tracker when we move to a new instruction
+    if (instructionIndex != _lastTrackedInstructionIndex) {
+      _lastSpokenTier = _VoiceTier.none;
+      _lastTrackedInstructionIndex = instructionIndex;
     }
 
-    if (shouldSpeak) {
-      _lastSpokenInstruction = instruction;
+    _VoiceTier targetTier = _VoiceTier.none;
+    String speechText = '';
+
+    if (distToTurn <= 5.0) {
+      // Tier 3: "Turn now"
+      targetTier = _VoiceTier.now;
+      speechText = 'Turn now';
+    } else if (distToTurn <= 15.0) {
+      // Tier 2: bare turn action — "Turn right"
+      targetTier = _VoiceTier.near;
+      speechText = turnText;
+    } else if (distToTurn > 40.0 && distToTurn <= 60.0) {
+      // Tier 1: early warning — "In 50 meters, turn right"
+      targetTier = _VoiceTier.early;
+      speechText =
+          'In ${distToTurn.round()} meters, ${turnText.toLowerCase()}';
+    }
+
+    // Only speak if we have escalated to a higher tier than last time
+    if (targetTier != _VoiceTier.none &&
+        targetTier.index > _lastSpokenTier.index) {
+      _lastSpokenTier = targetTier;
       speak(speechText);
     }
   }
 
+  /// Resets all voice tracking state (call on navigation start / reroute).
   void resetLastSpoken() {
-    _lastSpokenInstruction = null;
-    _lastSpokenDistance = null;
+    _lastSpokenTier = _VoiceTier.none;
+    _lastTrackedInstructionIndex = -1;
   }
 }

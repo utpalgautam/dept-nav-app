@@ -74,7 +74,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     super.initState();
     _markerAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 400), // Faster interpolation between GPS fixes
     )..addListener(_onMarkerAnimationTick);
     _fetchDestinationDetails();
   }
@@ -273,7 +273,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
+        distanceFilter: 1, // Update every meter instead of every 5m
       ),
     ).listen((Position position) {
       if (!mounted) return;
@@ -311,7 +311,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
           bearing: position.heading,
           tilt: 45,
         )),
-        duration: const Duration(milliseconds: 800),
+        duration: const Duration(milliseconds: 400), // Snappy pre-nav camera centering
       );
     }
   }
@@ -370,7 +370,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
             bearing: targetBearing,
             tilt: 55,
           )),
-          duration: const Duration(milliseconds: 900),
+          duration: const Duration(milliseconds: 450), // Snappy camera follow during navigation
         );
       }
     }
@@ -561,11 +561,11 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   void _drawRoute(List<LatLng> points, {List<LatLng>? fullPoints}) async {
     if (_mapController == null || points.isEmpty) return;
 
-    // Performance Optimization: Throttle drawing to ~10-15 FPS (every 100ms)
-    // for complex polyline updates to stay smooth on low-end devices.
+    // Performance Optimization: Throttle drawing to ~25 FPS (every 40ms)
+    // Faster redraws make the remaining route line shrink in near real-time.
     final now = DateTime.now();
     if (_lastDrawTimestamp != null) {
-      if (now.difference(_lastDrawTimestamp!).inMilliseconds < 100) {
+      if (now.difference(_lastDrawTimestamp!).inMilliseconds < 40) {
         return;
       }
     }
@@ -864,12 +864,13 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                       instruction: navProvider.currentInstruction ??
                           'Head to destination',
                       distance: navProvider.distanceToNextStep != null
-                          ? 'In ${NavigationUtils.formatDistance(navProvider.distanceToNextStep!, metric)}'
+                          ? NavigationUtils.formatDistance(navProvider.distanceToNextStep!, metric)
                           : '...',
                       sign: navProvider.currentSign,
                       nextInstruction: navProvider.nextInstruction,
                       nextSign: navProvider.nextSign,
                       isSpeaking: navProvider.isSpeaking,
+                      isUrgent: navProvider.isApproachingTurn,
                       onClose: () => _stopNavigation(navProvider),
                     ),
                   ),

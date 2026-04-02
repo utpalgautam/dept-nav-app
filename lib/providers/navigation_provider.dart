@@ -47,7 +47,7 @@ class NavigationProvider extends ChangeNotifier {
   DateTime? _lastUpdateTimestamp; // Throttling GPS processing
   
   // Smoothing: Kalman Filter for jitter reduction
-  final KalmanLatLong _kalmanFilter = KalmanLatLong(qMetresPerSecond: 1.5); // Walking pace noise
+  final KalmanLatLong _kalmanFilter = KalmanLatLong(qMetresPerSecond: 3.0); // Higher responsiveness for real-time tracking
   
   StreamSubscription<Position>? _positionStreamSubscription;
   final List<Position> _positionBuffer = [];
@@ -108,26 +108,37 @@ class NavigationProvider extends ChangeNotifier {
   List<LatLng> get remainingRouteCoordinates => 
       _remainingRouteCoordinates.isNotEmpty ? _remainingRouteCoordinates : (_currentRoute?.coordinates ?? []);
   String? get currentInstruction => _currentInstruction;
+  /// Preview of the turn AFTER the approaching one (shown in "Then…" pill).
   String? get nextInstruction {
-    if (_currentRoute == null || _currentInstructionIndex + 1 >= _currentRoute!.instructions.length) {
-      return null;
-    }
-    return _currentRoute!.instructions[_currentInstructionIndex + 1].text;
+    if (_currentRoute == null) return null;
+    final thenIdx = _currentInstructionIndex + 2;
+    if (thenIdx >= _currentRoute!.instructions.length) return null;
+    return _extractTurnAction(_currentRoute!.instructions[thenIdx].sign);
   }
-  
+
+  /// Shows the approaching turn icon when within 30 m, straight arrow otherwise.
   int get currentSign {
-    if (_currentRoute == null || _currentInstructionIndex >= _currentRoute!.instructions.length) {
-      return 0;
+    if (_currentRoute == null || _currentRoute!.instructions.isEmpty) return 0;
+    final nextIdx = _currentInstructionIndex + 1;
+    if (nextIdx < _currentRoute!.instructions.length) {
+      final dist = _distanceToNextStep ?? 999.0;
+      if (dist <= 30.0) return _currentRoute!.instructions[nextIdx].sign;
     }
-    return _currentRoute!.instructions[_currentInstructionIndex].sign;
+    return 0;
   }
 
   int? get nextSign {
-    if (_currentRoute == null || _currentInstructionIndex + 1 >= _currentRoute!.instructions.length) {
-      return null;
-    }
-    return _currentRoute!.instructions[_currentInstructionIndex + 1].sign;
+    if (_currentRoute == null) return null;
+    final thenIdx = _currentInstructionIndex + 2;
+    if (thenIdx >= _currentRoute!.instructions.length) return null;
+    return _currentRoute!.instructions[thenIdx].sign;
   }
+
+  /// True when a turn is imminent (≤ 15 m away) — drives urgency UI.
+  bool get isApproachingTurn =>
+      _isNavigating &&
+      _distanceToNextStep != null &&
+      _distanceToNextStep! <= 15.0;
 
   double? get distanceToNextStep => _distanceToNextStep;
   double? get distanceToDestination => _distanceToDestination;
@@ -701,8 +712,8 @@ class NavigationProvider extends ChangeNotifier {
         }
         _distanceToDestination = _currentRoute!.distance;
         _remainingRouteCoordinates = List.from(_currentRoute!.coordinates);
-        _distanceToNextStep = _currentRoute!.instructions.length > 1
-            ? _currentRoute!.instructions[1].distance
+        _distanceToNextStep = _currentRoute!.instructions.isNotEmpty
+            ? _currentRoute!.instructions[0].distance
             : null;
         return;
       }
@@ -720,8 +731,8 @@ class NavigationProvider extends ChangeNotifier {
         }
         _distanceToDestination = _currentRoute!.distance;
         _remainingRouteCoordinates = List.from(_currentRoute!.coordinates);
-        _distanceToNextStep = _currentRoute!.instructions.length > 1 
-            ? _currentRoute!.instructions[1].distance 
+        _distanceToNextStep = _currentRoute!.instructions.isNotEmpty 
+            ? _currentRoute!.instructions[0].distance 
             : null;
       }
     } catch (e) {
@@ -742,14 +753,17 @@ class NavigationProvider extends ChangeNotifier {
     _positionUpdateCount = 0;
     _deviationCount = 0;
     _currentInstructionIndex = 0;
-    if (_currentRoute!.instructions.isNotEmpty) {
-      _currentInstruction = _currentRoute!.instructions.first.text;
+    // Build distance-based initial instruction from the first segment's distance
+    if (_currentRoute!.instructions.length > 1) {
+      final firstSegDist = _currentRoute!.instructions[0].distance;
+      _currentInstruction = firstSegDist > 0
+          ? "Continue for ${firstSegDist.toStringAsFixed(0)} m"
+          : "Head to destination";
+    } else {
+      _currentInstruction = "Head to destination";
     }
-    
     _voiceService.resetLastSpoken();
-    if (_currentInstruction != null) {
-      _voiceService.speak("Starting navigation. $_currentInstruction.");
-    }
+    _voiceService.speak("Starting navigation. $_currentInstruction");
     
     notifyListeners();
 
@@ -760,14 +774,14 @@ class NavigationProvider extends ChangeNotifier {
   void _startLocationTracking() {
     _positionStreamSubscription?.cancel();
 
-    // High frequency updates: 1 second interval, 1 meter distance filter
-    // Use platform-specific settings for more reliability if available
+    // Maximum frequency: 500ms interval, 0m distance filter (every sensor tick)
+    // Platform-specific settings for maximum GPS polling rate
     final LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 1,
-        intervalDuration: const Duration(seconds: 1),
+        distanceFilter: 0, // No distance gate — emit every hardware update
+        intervalDuration: const Duration(milliseconds: 500), // ~2 Hz from OS
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationText: "Navigation is in progress",
           notificationTitle: "NITC Campus Navigator",
@@ -777,7 +791,7 @@ class NavigationProvider extends ChangeNotifier {
     } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
       locationSettings = AppleSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 1,
+        distanceFilter: 0, // No distance gate
         activityType: ActivityType.fitness,
         pauseLocationUpdatesAutomatically: false,
         showBackgroundLocationIndicator: true,
@@ -785,7 +799,7 @@ class NavigationProvider extends ChangeNotifier {
     } else {
       locationSettings = const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 1,
+        distanceFilter: 0, // No distance gate
       );
     }
 
@@ -798,8 +812,9 @@ class NavigationProvider extends ChangeNotifier {
     });
   }
   void _handlePositionUpdate(Position position) {
-    // 1. Accuracy Filtering: Ignore readings > 25 meters
-    if (position.accuracy > 25) {
+    // 1. Accuracy Filtering: Ignore readings > 40 meters
+    // Raised from 25m to accept more frequent fixes while still rejecting very bad readings
+    if (position.accuracy > 40) {
       debugPrint("Ignoring low accuracy GPS reading: ${position.accuracy}m");
       return;
     }
@@ -819,8 +834,8 @@ class NavigationProvider extends ChangeNotifier {
         );
       }
 
-      // Throttle: Ignore if < 500ms AND < 1.0m (unless it's a heading change)
-      if (timeDiff < 500 && distDiff < 1.0) {
+      // Throttle: Ignore if < 150ms AND < 0.3m — allows ~6 updates/sec, accepts slow walking
+      if (timeDiff < 150 && distDiff < 0.3) {
         return;
       }
     }
@@ -845,17 +860,18 @@ class NavigationProvider extends ChangeNotifier {
     }
     _positionUpdateCount++;
 
-    // 2. Smoothing: weighted average (0.7 * previous + 0.3 * current)
+    // 2. Smoothing: weighted average (0.5 * previous + 0.5 * current)
+    // Higher alpha = more responsive to new positions (was 0.3, now 0.5)
     if (_snappedPosition != null) {
       newLatLng = NavigationUtils.smoothCoordinates(
         _snappedPosition!,
         newLatLng,
-        alpha: 0.3,
+        alpha: 0.5,
       );
     }
 
-    // 2.5 Map Matching: Trigger every 5 updates for background validation
-    if (_isNavigating && _positionUpdateCount % 5 == 0 && _positionBuffer.length >= 3) {
+    // 2.5 Map Matching: Trigger every 3 updates for more accurate route snapping
+    if (_isNavigating && _positionUpdateCount % 3 == 0 && _positionBuffer.length >= 3) {
       _performMapMatching();
     }
 
@@ -924,47 +940,121 @@ class NavigationProvider extends ChangeNotifier {
   void _updateInstructions(LatLng snapped, int segmentIndex) {
     if (_currentRoute == null || _currentRoute!.instructions.isEmpty) return;
 
-    // 1. Proximity Check for the NEXT instruction (< 10m)
-    if (_currentInstructionIndex + 1 < _currentRoute!.instructions.length) {
-      final nextInst = _currentRoute!.instructions[_currentInstructionIndex + 1];
-      final nextPoint = _currentRoute!.coordinates[nextInst.interval[0]];
-      
-      _distanceToNextStep = NavigationUtils.calculateDistance(snapped, nextPoint);
-      
-      // Calculate coordinates for the "next segment" (from current position to next turn)
-      // nextInst.interval[0] is the index where the NEXT instruction STARTS.
-      // So the current leg is from current position to that index.
-      int endIdx = nextInst.interval[0];
-      if (endIdx > segmentIndex) {
-        _nextSegmentCoordinates = [snapped, ..._currentRoute!.coordinates.sublist(segmentIndex + 1, endIdx + 1)];
-      } else {
-        _nextSegmentCoordinates = [snapped, nextPoint];
-      }
+    final instructions = _currentRoute!.instructions;
 
-      // Advance if within 10m or if we passed the segment index
-      if (_distanceToNextStep! < 10.0 || segmentIndex >= nextInst.interval[0]) {
-        _currentInstructionIndex++;
-        _currentInstruction = _currentRoute!.instructions[_currentInstructionIndex].text;
-        _voiceService.resetLastSpoken(); // Allow immediate voice for the new instruction
-        
-        // Update distance to the NEW next step if any
-        if (_currentInstructionIndex + 1 < _currentRoute!.instructions.length) {
-          final afterNext = _currentRoute!.instructions[_currentInstructionIndex + 1];
-          final afterNextPoint = _currentRoute!.coordinates[afterNext.interval[0]];
-          _distanceToNextStep = NavigationUtils.calculateDistance(snapped, afterNextPoint);
-        } else {
-          _distanceToNextStep = null;
-        }
-        notifyListeners();
-      }
-      
-      if (_distanceToNextStep != null && _currentInstruction != null) {
-        _voiceService.speakNavigationInstruction(_currentInstruction!, _distanceToNextStep!);
-      }
-    } else {
-      _distanceToNextStep = null;
-      // Last segment: show remaining to destination
+    // ── Last segment: no more turns ──────────────────────────────────────
+    if (_currentInstructionIndex + 1 >= instructions.length) {
+      _distanceToNextStep = _distanceToDestination;
+      _currentInstruction = "Head to destination";
       _nextSegmentCoordinates = List.from(_remainingRouteCoordinates);
+      return;
+    }
+
+    final nextInst = instructions[_currentInstructionIndex + 1];
+    final int nextTurnNodeIdx = nextInst.interval[0]
+        .clamp(0, _currentRoute!.coordinates.length - 1);
+
+    // ── Compute precise distance to next turn along route polyline ────────
+    if (nextTurnNodeIdx > segmentIndex + 1) {
+      final legPoints = [
+        snapped,
+        ..._currentRoute!.coordinates
+            .sublist(segmentIndex + 1, nextTurnNodeIdx + 1),
+      ];
+      _distanceToNextStep =
+          NavigationUtils.calculatePolylineDistance(legPoints);
+      _nextSegmentCoordinates = legPoints;
+    } else {
+      final nextTurnLatLng =
+          _currentRoute!.coordinates[nextTurnNodeIdx];
+      _distanceToNextStep =
+          NavigationUtils.calculateDistance(snapped, nextTurnLatLng);
+      _nextSegmentCoordinates = [snapped, nextTurnLatLng];
+    }
+
+    final double dist = _distanceToNextStep ?? 999.0;
+
+    // ── Advance instruction when user arrives at turn node ────────────────
+    if (dist < 8.0 || segmentIndex >= nextTurnNodeIdx) {
+      _currentInstructionIndex++;
+      _voiceService.resetLastSpoken();
+      if (_currentInstructionIndex >= instructions.length) return;
+
+      // Immediately show "Continue for Xm" using the new segment's distance
+      if (_currentInstructionIndex + 1 < instructions.length) {
+        final newSegDist =
+            instructions[_currentInstructionIndex + 1].distance;
+        _currentInstruction = newSegDist > 0
+            ? "Continue for ${newSegDist.toStringAsFixed(0)} m"
+            : "Head to destination";
+        if (newSegDist > 30) {
+          _voiceService
+              .speak("Continue for ${newSegDist.toStringAsFixed(0)} meters");
+        }
+      } else {
+        _currentInstruction = "Head to destination";
+      }
+      notifyListeners();
+      return; // Fresh compute on next GPS tick
+    }
+
+    // ── Short-segment combining (back-to-back tight turns) ────────────────
+    bool isCombined = false;
+    String combinedText = "";
+    if (dist <= 10.0 && _currentInstructionIndex + 2 < instructions.length) {
+      final afterNextInst = instructions[_currentInstructionIndex + 2];
+      if (afterNextInst.distance <= 15.0) {
+        combinedText =
+            "${_extractTurnAction(nextInst.sign)}, then immediately "
+            "${_extractTurnAction(afterNextInst.sign).toLowerCase()}";
+        isCombined = true;
+      }
+    }
+
+    // ── Distance-adaptive instruction label ───────────────────────────────
+    final String turnText = _extractTurnAction(nextInst.sign);
+
+    if (dist <= 5.0) {
+      _currentInstruction = isCombined ? combinedText : "Turn now";
+    } else if (dist <= 15.0) {
+      _currentInstruction = isCombined ? combinedText : turnText;
+    } else if (dist <= 30.0) {
+      _currentInstruction =
+          "In ${dist.toStringAsFixed(0)} m, $turnText";
+    } else {
+      _currentInstruction = "Continue for ${dist.toStringAsFixed(0)} m";
+    }
+
+    // ── Tiered voice guidance ─────────────────────────────────────────────
+    _voiceService.speakNavigationInstruction(
+        turnText, dist, _currentInstructionIndex);
+  }
+
+  /// Maps a GraphHopper sign code to a clean, speakable action string.
+  String _extractTurnAction(int sign) {
+    switch (sign) {
+      case -3:
+        return "Turn sharp left";
+      case -2:
+        return "Turn left";
+      case -1:
+        return "Bear left";
+      case 0:
+        return "Continue straight";
+      case 1:
+        return "Bear right";
+      case 2:
+        return "Turn right";
+      case 3:
+        return "Turn sharp right";
+      case 4:
+        return "You have arrived";
+      case 5:
+        return "Make a U-turn";
+      case 6:
+        return "Continue straight";
+      default:
+        return "Continue";
     }
   }
 

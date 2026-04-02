@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +20,9 @@ class AuthProvider extends ChangeNotifier {
   bool _isGuest = false; // guest mode flag
   String? _errorMessage;
 
+  /// Firestore real-time listener for the current user document.
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSubscription;
+
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   bool get isInitialized => _initialized;
@@ -32,7 +37,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
-      // Firebase signed out (explicit logout, or token expired).
+      // Firebase signed out — cancel live listener and clear user.
+      _stopUserDocListener();
       _currentUser = null;
       _isGuest = false;
     } else {
@@ -42,13 +48,12 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = await _authService.getCurrentUserModel();
         if (_currentUser == null) {
           // Ghost/orphaned Firebase session — no Firestore account exists.
-          // Set to null so the user lands on the login screen cleanly.
-          // Do NOT aggressively call _authService.signOut() here because it
-          // causes a race condition with signInWithGoogle's ghost cleanup flow.
           debugPrint('AuthProvider: Orphaned Firebase session detected.');
+        } else {
+          // Start real-time listener so any Firestore write is reflected instantly.
+          _startUserDocListener(firebaseUser.uid);
         }
       } catch (e) {
-        // Firestore error — do not create a fallback, just show login.
         debugPrint('AuthProvider: Firestore read error on session restore: $e');
         _currentUser = null;
       }
@@ -119,6 +124,9 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
     try {
       _currentUser = await _authService.signInWithGoogle();
+      if (_currentUser != null) {
+        _startUserDocListener(_currentUser!.uid);
+      }
       notifyListeners();
       return true;
     } catch (e) {
@@ -238,11 +246,11 @@ class AuthProvider extends ChangeNotifier {
 
   // ── Logout ────────────────────────────────────────────────────────────────
   Future<void> logout() async {
+    _stopUserDocListener();
     await _authService.signOut();
     _currentUser = null;
     _isGuest = false;
     // Reset onboarding flag: next cold start after logout will show onboarding.
-    // Flow: logout → swipe-out app → reopen → onboarding → login → home.
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kHasSeenOnboarding);
     notifyListeners();
@@ -250,7 +258,10 @@ class AuthProvider extends ChangeNotifier {
 
   void setGuestMode(bool value) {
     _isGuest = value;
-    if (value) _currentUser = null;
+    if (value) {
+      _stopUserDocListener();
+      _currentUser = null;
+    }
     if (!value) {
       // Exiting guest mode — reset onboarding so full flow runs on next launch.
       SharedPreferences.getInstance().then(
@@ -320,6 +331,29 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error clearing recent searches: $e');
     }
+  }
+
+  // ── Real-Time Firestore Listener ──────────────────────────────────────────
+  void _startUserDocListener(String uid) {
+    _userDocSubscription?.cancel(); // Cancel any previous listener first
+    _userDocSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((DocumentSnapshot<Map<String, dynamic>> snapshot) {
+      if (!snapshot.exists || snapshot.data() == null) return;
+      final updated = UserModel.fromFirestore(snapshot.data()!, uid);
+      _currentUser = updated;
+      notifyListeners(); // Propagates instantly to all Consumer widgets
+    }, onError: (e) {
+      debugPrint('AuthProvider: Firestore stream error: $e');
+    });
+    debugPrint('AuthProvider: Started real-time listener for user/$uid');
+  }
+
+  void _stopUserDocListener() {
+    _userDocSubscription?.cancel();
+    _userDocSubscription = null;
   }
 
   void _setLoading(bool value) {
