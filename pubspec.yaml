@@ -52,5 +52,6 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/onboarding/
+    - assets/images/themes/
     - assets/images/
     - lib/screens/home/image 36.png

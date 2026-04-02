@@ -83,8 +83,26 @@ class NavigationProvider extends ChangeNotifier {
 
   // PDR Configuration
   static const double _mapUnitsPerMeter = 40.0;
-  static const double _stepLengthMeters = 0.7;
-  static const double _stepUnits = _stepLengthMeters * _mapUnitsPerMeter;
+  double _stepLengthMeters = 0.7;
+  double _stepUnits = 0.7 * _mapUnitsPerMeter;
+
+  void updateWalkingSpeed(String speed) {
+    switch (speed.toLowerCase()) {
+      case 'slow':
+        _stepLengthMeters = 0.6;
+        break;
+      case 'fast':
+        _stepLengthMeters = 0.8;
+        break;
+      case 'normal':
+      default:
+        _stepLengthMeters = 0.7;
+        break;
+    }
+    _stepUnits = _stepLengthMeters * _mapUnitsPerMeter;
+    debugPrint('NavigationProvider: Step length updated to $_stepLengthMeters meters ($_stepUnits units)');
+    notifyListeners();
+  }
   
   // Orientation data
   List<double> _accelerometerValues = [0, 0, 0];

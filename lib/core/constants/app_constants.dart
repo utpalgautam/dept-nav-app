@@ -23,6 +23,76 @@ class AppConstants {
   static const double entryPointRadius = 20.0; // meters
 }
 
+class MapStyle {
+  // Official OSM Raster Tiles for the exact classic look the user requested
+  static const String standard = '''
+{
+  "version": 8,
+  "sources": {
+    "osm-raster-tiles": {
+      "type": "raster",
+      "tiles": [
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256,
+      "attribution": "© OpenStreetMap contributors"
+    }
+  },
+  "layers": [
+    {
+      "id": "osm-layer",
+      "type": "raster",
+      "source": "osm-raster-tiles",
+      "minzoom": 0,
+      "maxzoom": 19
+    }
+  ]
+}
+''';
+  
+  // Clean greyish vector style for "Bright"
+  static const String bright = 'https://tiles.openfreemap.org/styles/positron';
+  
+  // Valid MapLibre style JSON for ArcGIS Satellite tiles
+  static const String satellite = '''
+{
+  "version": 8,
+  "sources": {
+    "arcgis-satellite": {
+      "type": "raster",
+      "tiles": [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      ],
+      "tileSize": 256,
+      "attribution": "Esri, Maxar, Earthstar Geographics"
+    }
+  },
+  "layers": [
+    {
+      "id": "satellite-layer",
+      "type": "raster",
+      "source": "arcgis-satellite",
+      "minzoom": 0,
+      "maxzoom": 20
+    }
+  ]
+}
+''';
+  
+  // For easy mapping from preference string
+  static String getStyle(String? theme) {
+    switch (theme?.toLowerCase()) {
+      case 'bright':
+        return bright;
+      case 'satellite':
+        return satellite;
+      case 'standard':
+      default:
+        return standard;
+    }
+  }
+}
+
 class SharedPrefKeys {
   static const String recentSearches = 'recent_searches';
   static const String savedLocations = 'saved_locations';

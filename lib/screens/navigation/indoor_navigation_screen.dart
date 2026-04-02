@@ -870,6 +870,11 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
               onTap: () {
                 if (!navProv.isPdrEnabled) {
                   if (_currentPath.isNotEmpty) {
+                    // Inject walking speed preference
+                    final auth = context.read<app_auth.AuthProvider>();
+                    final walkingSpeed = auth.currentUser?.preferences['walkingSpeed'] ?? 'Normal';
+                    navProv.updateWalkingSpeed(walkingSpeed);
+
                     navProv.setIndoorPdrEnabled(true, 
                       startX: _currentPath.first.x, 
                       startY: _currentPath.first.y,

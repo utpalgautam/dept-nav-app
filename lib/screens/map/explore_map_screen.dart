@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import '../../core/utils/navigation_utils.dart';
+import '../../core/constants/app_constants.dart';
+import '../../providers/auth_provider.dart' as app_auth;
 
 class ExploreMapScreen extends StatefulWidget {
   const ExploreMapScreen({super.key});
@@ -293,7 +296,9 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
               zoom: 17.0,
               tilt: 0,
             ),
-            styleString: MapStyle.classic,
+            styleString: MapStyle.getStyle(
+              context.read<app_auth.AuthProvider>().currentUser?.preferences['exploreMapTheme']
+            ),
             myLocationEnabled: false, // Using custom layered blue dot
             myLocationRenderMode: MyLocationRenderMode.normal,
             myLocationTrackingMode: MyLocationTrackingMode.none,
@@ -478,20 +483,3 @@ class _RecenterButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Map Style Definitions
-// ─────────────────────────────────────────────────────────────────────────────
-
-class MapStyle {
-  /// Classical Map Style (Carto Voyager)
-  static const String classic =
-      'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-
-  /// Carto Dark Matter GL — free, no API key required
-  static const String darkMatter =
-      'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-
-  /// Carto Voyager (light, for reference)
-  static const String voyager =
-      'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-}

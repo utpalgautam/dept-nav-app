@@ -319,6 +319,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
                 _buildWalkingSpeedRow(auth),
+                const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
+                _buildMapThemeListTile(auth),
               ]),
               const SizedBox(height: 32),
               
@@ -518,6 +520,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildListTile({
     required String title,
     required IconData icon,
+    String? subtitle,
     Color iconColor = Colors.white,
     Color iconBgColor = Colors.black,
     Widget? trailing,
@@ -537,13 +540,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Colors.black87,
-                fontWeight: FontWeight.w400,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           if (trailing != null) trailing else const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF), size: 20),
@@ -632,6 +652,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+  Widget _buildMapThemeListTile(app_auth.AuthProvider auth) {
+    return Column(
+      children: [
+        _buildListTile(
+          title: 'Outdoor Theme',
+          icon: Icons.map_outlined,
+          subtitle: 'Choose your navigation style',
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          child: _buildThemeSelector(
+            currentTheme: auth.currentUser?.preferences['outdoorNavTheme'] ?? 'Standard',
+            onSelect: (theme) {
+              final newPrefs = Map<String, dynamic>.from(auth.currentUser?.preferences ?? {});
+              newPrefs['outdoorNavTheme'] = theme;
+              auth.updatePreferences(newPrefs);
+            },
+          ),
+        ),
+        const Divider(height: 1, indent: 64, endIndent: 0, color: Color(0xFFF0F0F0)),
+        _buildListTile(
+          title: 'Explore Theme',
+          icon: Icons.explore_outlined,
+          subtitle: 'Choose your explore style',
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          child: _buildThemeSelector(
+            currentTheme: auth.currentUser?.preferences['exploreMapTheme'] ?? 'Standard',
+            onSelect: (theme) {
+              final newPrefs = Map<String, dynamic>.from(auth.currentUser?.preferences ?? {});
+              newPrefs['exploreMapTheme'] = theme;
+              auth.updatePreferences(newPrefs);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThemeSelector({required String currentTheme, required Function(String) onSelect}) {
+    final List<Map<String, String>> themes = [
+      {'name': 'Standard', 'image': 'assets/images/themes/osm.png'},
+      {'name': 'Bright', 'image': 'assets/images/themes/bright.png'},
+      {'name': 'Satellite', 'image': 'assets/images/themes/satellite.png'},
+    ];
+
+    return SizedBox(
+      height: 90,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: themes.map((theme) {
+          final isSelected = currentTheme == theme['name'];
+          
+          return GestureDetector(
+            onTap: () => onSelect(theme['name']!),
+            child: Container(
+              width: 90,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? Colors.black : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.asset(
+                      theme['image']!,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, stack) => Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image_outlined, color: Colors.grey, size: 20),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.5),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 4,
+                    left: 0,
+                    right: 0,
+                    child: Text(
+                      theme['name']!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.black,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check, color: Colors.white, size: 8),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

@@ -49,7 +49,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   bool _isTransitioningToIndoor = false;
   bool _isCentered = true;
   double _currentBearing = 0.0;
-  MapFollowMode _followMode = MapFollowMode.northUp;
+  MapFollowMode _followMode = MapFollowMode.headingUp; // Default to Heading-Up for vertical alignment
   bool _isAutoRotating = false;
   DateTime? _lastDrawTimestamp; // Throttling map drawing
   bool _hasSpokenDestination = false;
@@ -361,7 +361,9 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
       }
 
       if (_isCentered) {
-        final double targetBearing = (_followMode == MapFollowMode.headingUp) ? _currentHeading : 0;
+        final double targetBearing = (_followMode == MapFollowMode.headingUp) 
+            ? (provider.currentPosition?.heading ?? 0) 
+            : 0;
         
         _mapController?.animateCamera(
           CameraUpdate.newCameraPosition(CameraPosition(
@@ -716,6 +718,10 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
   // ─────────────────────────────────────────────────────────────────
   void _startNavigation(NavigationProvider provider) {
     if (provider.currentRoute != null) {
+      setState(() {
+        _followMode = MapFollowMode.headingUp; // Ensure HeadingUp on start
+        _isCentered = true;
+      });
       _navigationStartTime = DateTime.now();
       provider.startOutdoorNavigation();
     } else {
@@ -829,7 +835,9 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                     zoom: AppConstants.defaultMapZoom,
                     tilt: 45,
                   ),
-                  styleString: _NavMapStyle.classic,
+                  styleString: MapStyle.getStyle(
+                    auth.currentUser?.preferences['outdoorNavTheme']
+                  ),
                   myLocationEnabled: false, // custom marker for smooth animation
                   myLocationRenderMode: MyLocationRenderMode.normal,
                   compassEnabled: false, // custom compass button
@@ -1086,14 +1094,6 @@ class _RecenterPill extends StatelessWidget {
 // Map Style
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _NavMapStyle {
-  static const String classic =
-      'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-  static const String darkMatter =
-      'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-  static const String positron =
-      'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
-}
 
 class _TopHalfClipper extends CustomClipper<Rect> {
   @override
