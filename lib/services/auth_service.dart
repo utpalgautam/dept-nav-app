@@ -173,74 +173,73 @@ class AuthService {
         idToken: googleSignInAuthentication.idToken,
       );
 
-      // ── Account linking: if same email exists via email/password, link it ─
       final email = googleSignInAccount.email.trim();
-      UserCredential userCredential;
 
+      // ── First check if a Firestore account exists for this email ─────────
+      // (Google Sign-In is only for existing users, not sign-up)
+      final existingByEmail = await _db
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (existingByEmail.docs.isEmpty) {
+        // No account in Firestore — reject sign-in and clean up
+        await googleSignIn.signOut();
+        throw 'No account found with this Google account. Please sign up first.';
+      }
+
+      // ── Account exists — proceed with Firebase Auth sign-in ──────────────
+      UserCredential userCredential;
       try {
-        final methods = await _auth.fetchSignInMethodsForEmail(email);
-        if (methods.contains('password') && _auth.currentUser == null) {
-          // Existing email/password account — sign in with Google to link
-          debugPrint('Google Sign-In: Linking with existing email/password account...');
-          userCredential = await _auth.signInWithCredential(googleCredential)
-              .timeout(const Duration(seconds: 15),
-                  onTimeout: () => throw 'Firebase credential sign-in timed out (15s).');
-          // Try to link Google provider to the account (may already be linked)
-          try {
-            await userCredential.user!.linkWithCredential(googleCredential);
-          } on FirebaseAuthException catch (linkErr) {
-            // Ignore if already linked or provider already exists
-            debugPrint('Link attempt result: ${linkErr.code}');
-          }
-        } else {
-          userCredential = await _auth.signInWithCredential(googleCredential)
-              .timeout(const Duration(seconds: 15),
-                  onTimeout: () => throw 'Firebase credential sign-in timed out (15s).');
-        }
+        userCredential = await _auth.signInWithCredential(googleCredential)
+            .timeout(const Duration(seconds: 15),
+                onTimeout: () => throw 'Firebase credential sign-in timed out (15s).');
       } on FirebaseAuthException catch (e) {
+        if (e.code == 'account-exists-with-different-credential') {
+          // The email was registered with email/password. We need to link.
+          // Since we already verified the Firestore doc exists, this is a valid user.
+          debugPrint('Google Sign-In: account-exists-with-different-credential, '
+              'user needs to sign in with email/password first to link Google.');
+          await googleSignIn.signOut();
+          throw 'This email is registered with a password. '
+              'Please sign in with your email and password.';
+        }
         throw _authErrorMessage(e.code);
       }
 
       final User user = userCredential.user!;
 
-      debugPrint('Google Sign-In: Updating Firestore...');
-      // Also check by email in case UID differs (old email/password doc)
+      debugPrint('Google Sign-In: Resolving Firestore user document...');
       final doc = await _db.collection('users').doc(user.uid).get();
       UserModel userModel;
 
       if (doc.exists && doc.data() != null) {
+        // Firestore doc found directly by UID — happy path
         userModel = UserModel.fromFirestore(doc.data()!, user.uid);
         await _db.collection('users').doc(user.uid).update({
           'lastLogin': Timestamp.fromDate(DateTime.now()),
         });
       } else {
-        // Search for existing record by email (in case UID is different)
-        final existing = await _db
-            .collection('users')
-            .where('email', isEqualTo: email)
-            .limit(1)
-            .get();
-
+        // UID mismatch — the user originally signed up with email/password
+        // and got a different UID. Migrate the Firestore doc to the new UID.
+        final oldDoc = existingByEmail.docs.first;
+        final oldData = oldDoc.data();
         final now = DateTime.now();
-        if (existing.docs.isNotEmpty) {
-          final oldData = existing.docs.first.data();
-          userModel = UserModel.fromFirestore(oldData, user.uid);
-          // Migrate the document to the new UID
-          await _db.collection('users').doc(user.uid).set({
-            ...oldData,
-            'uid': user.uid,
-            'lastLogin': Timestamp.fromDate(now),
-          });
-        } else {
-          // No Firestore doc found. Delete ghost Firebase account so they can register cleanly.
-          final bool hasPassword = user.providerData.any((p) => p.providerId == 'password');
-          if (!hasPassword) {
-            await user.delete();
-          } else {
-            await _auth.signOut();
-          }
-          await GoogleSignIn().signOut();
-          throw 'No account found with this Google account. Please sign up first.';
+
+        userModel = UserModel.fromFirestore(oldData, user.uid);
+
+        // Create doc under the new UID
+        await _db.collection('users').doc(user.uid).set({
+          ...oldData,
+          'uid': user.uid,
+          'lastLogin': Timestamp.fromDate(now),
+        });
+
+        // Optionally remove the old doc if it has a different ID
+        if (oldDoc.id != user.uid) {
+          await _db.collection('users').doc(oldDoc.id).delete();
+          debugPrint('Google Sign-In: Migrated Firestore doc from ${oldDoc.id} to ${user.uid}');
         }
       }
 
