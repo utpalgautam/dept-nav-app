@@ -1623,6 +1623,49 @@ body {
   background: #fee2e2;
 }
 
+.bf-ep-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.bf-ep-edit {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f2f4f7;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bf-ep-edit:hover {
+  background: #e5e7eb;
+}
+
+/* Entry Point Modal Styling */
+.bf-ep-modal {
+  max-width: 500px !important;
+}
+
+.bf-btn-light {
+    background: #f3f4f6;
+    color: #111;
+    border: none;
+    border-radius: 100px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.6rem 1.5rem;
+    cursor: pointer;
+}
+
+.bf-btn-light:hover {
+    background: #e5e7eb;
+}
+
 /* Main Save Button */
 .bf-save-main-btn {
   width: 100%;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaCloudUploadAlt, FaTimes, FaEdit } from 'react-icons/fa';
 import { DEPARTMENTS } from '../constants/departments';
 
 /**
@@ -64,6 +64,10 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
         imageFile: null,
         imageFileName: ''
     });
+
+    // --- Edit Entry Point Modal State ---
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editEpData, setEditEpData] = useState(null);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -149,6 +153,56 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
 
     const removeEntryPoint = (indexToRemove) => {
         setEntryPoints(entryPoints.filter((_, idx) => idx !== indexToRemove));
+    };
+
+    const openEditModal = (ep, index) => {
+        setEditEpData({ ...ep, index });
+        setIsEditModalOpen(true);
+        setError('');
+    };
+
+    const closeEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditEpData(null);
+    };
+
+    const handleEditEpChange = (e) => {
+        const { name, value } = e.target;
+        setEditEpData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditEpImageSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setEditEpData(prev => ({
+                ...prev,
+                imageFile: file,
+                imageFileName: file.name,
+                _localPreview: URL.createObjectURL(file),
+                _localFileName: file.name
+            }));
+        }
+    };
+
+    const saveEditedEp = () => {
+        if (!editEpData.label.trim()) { setError('Entry Point Label is required'); return; }
+        if (!editEpData.latitude || !editEpData.longitude) { setError('Entry Point Lat/Lng required'); return; }
+
+        const updatedEps = [...entryPoints];
+        updatedEps[editEpData.index] = {
+            id: editEpData.id,
+            label: editEpData.label,
+            latitude: editEpData.latitude,
+            longitude: editEpData.longitude,
+            imageFile: editEpData.imageFile,
+            imageUrl: editEpData.imageUrl,
+            _localPreview: editEpData._localPreview,
+            _localFileName: editEpData._localFileName || editEpData.imageFileName
+        };
+
+        setEntryPoints(updatedEps);
+        closeEditModal();
+        setError('');
     };
 
 
@@ -376,9 +430,14 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
                                             ) : (
                                                 <div className="bf-ep-thumb-placeholder" />
                                             )}
-                                            <button className="bf-ep-remove" onClick={() => removeEntryPoint(idx)}>
-                                                <FaTimes size={10} color="#111" />
-                                            </button>
+                                            <div className="bf-ep-actions">
+                                                <button className="bf-ep-edit" onClick={() => openEditModal(ep, idx)} title="Edit Entry Point">
+                                                    <FaEdit size={12} color="#111" />
+                                                </button>
+                                                <button className="bf-ep-remove" onClick={() => removeEntryPoint(idx)} title="Remove Entry Point">
+                                                    <FaTimes size={10} color="#111" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -404,6 +463,69 @@ const BuildingForm = ({ building, onSave, onCancel }) => {
                     {loading ? 'Saving securely...' : 'Save Building Details'}
                 </button>
             </div>
+
+            {/* Entry Point Edit Modal */}
+            {isEditModalOpen && editEpData && (
+                <div className="modal-overlay">
+                    <div className="modal-content bf-ep-modal">
+                        <div className="modal-header">
+                            <h3>Edit Entry Point</h3>
+                            <button onClick={closeEditModal} className="close-btn"><FaTimes /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="bf-row">
+                                <div className="bf-form-group">
+                                    <label className="bf-label">Label</label>
+                                    <input
+                                        type="text"
+                                        name="label"
+                                        className="bf-input"
+                                        value={editEpData.label}
+                                        onChange={handleEditEpChange}
+                                    />
+                                </div>
+                            </div>
+                            <div className="bf-row" style={{ marginTop: '1rem' }}>
+                                <div className="bf-form-group">
+                                    <label className="bf-label">Latitude</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        name="latitude"
+                                        className="bf-input"
+                                        value={editEpData.latitude}
+                                        onChange={handleEditEpChange}
+                                    />
+                                </div>
+                                <div className="bf-form-group">
+                                    <label className="bf-label">Longitude</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        name="longitude"
+                                        className="bf-input"
+                                        value={editEpData.longitude}
+                                        onChange={handleEditEpChange}
+                                    />
+                                </div>
+                            </div>
+                            <div className="bf-form-group" style={{ marginTop: '1.5rem' }}>
+                                <label className="bf-label">Entry Point Photo</label>
+                                <ImageUploadZone
+                                    label="Update Photo"
+                                    fileName={editEpData.imageFileName || editEpData._localFileName}
+                                    previewUrl={editEpData._localPreview || editEpData.imageUrl}
+                                    onChange={handleEditEpImageSelect}
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button onClick={closeEditModal} className="bf-btn-light">Cancel</button>
+                            <button onClick={saveEditedEp} className="bf-btn-dark">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
