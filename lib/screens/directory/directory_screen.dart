@@ -214,6 +214,23 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     );
   }
 
+  bool _fuzzyMatch(String query, String target) {
+    if (query.isEmpty) return true;
+    if (target.isEmpty) return false;
+    
+    query = query.toLowerCase().replaceAll(' ', '');
+    target = target.toLowerCase();
+    
+    int queryIndex = 0;
+    for (int i = 0; i < target.length; i++) {
+      if (target[i] == query[queryIndex]) {
+        queryIndex++;
+        if (queryIndex == query.length) return true;
+      }
+    }
+    return false;
+  }
+
   String _getSearchHint() {
     switch (_selectedSegment) {
       case 0:
@@ -262,8 +279,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         if (_searchQuery.isNotEmpty) {
           items = items
               .where((f) =>
-                  f.name.toLowerCase().contains(_searchQuery) ||
-                  f.department.toLowerCase().contains(_searchQuery))
+                  _fuzzyMatch(_searchQuery, f.name) ||
+                  _fuzzyMatch(_searchQuery, f.department))
               .toList();
         }
 
@@ -324,7 +341,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         var items = (snapshot.data ?? []).toList();
         if (_searchQuery.isNotEmpty) {
           items = items
-              .where((h) => h.name.toLowerCase().contains(_searchQuery))
+              .where((h) => _fuzzyMatch(_searchQuery, h.name))
               .toList();
         }
 
@@ -386,8 +403,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         if (_searchQuery.isNotEmpty) {
           items = items
               .where((l) =>
-                  l.name.toLowerCase().contains(_searchQuery) ||
-                  l.department.toLowerCase().contains(_searchQuery))
+                  _fuzzyMatch(_searchQuery, l.name) ||
+                  _fuzzyMatch(_searchQuery, l.department))
               .toList();
         }
 
@@ -523,7 +540,6 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                       behavior: HitTestBehavior.opaque,
                       onTap: () => _handleNavigationTap(
                         locationId,
-                        context,
                         location: location,
                         building: bSnapshot.data,
                       ),
@@ -547,11 +563,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   }
 
   Future<void> _handleNavigationTap(
-    String locationId,
-    BuildContext context, {
+    String locationId, {
     LocationModel? location,
     BuildingModel? building,
   }) async {
+    if (!mounted) return;
     try {
       if (locationId.isEmpty && location == null) return;
 
@@ -598,11 +614,10 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         }
 
         if (mounted) {
-          Navigator.pop(context); // Close loading dialog
+          Navigator.of(context).pop(); // Close loading dialog
           if (bld != null && bld.entryPoints.isNotEmpty) {
             final entryPoint = bld.entryPoints.first;
-            Navigator.push(
-              context,
+            Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => OutdoorNavigationScreen(
                   targetBuilding: bld,
@@ -622,7 +637,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         }
       } else {
         if (mounted) {
-          Navigator.pop(context); // Close loading dialog
+          Navigator.of(context).pop(); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Location data not found or took too long.')),
           );
@@ -630,7 +645,10 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
+        // Safely try to dismiss loading dialog if it's still open
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
