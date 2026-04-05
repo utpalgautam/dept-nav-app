@@ -290,6 +290,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
           MaplibreMap(
             onMapCreated: _onMapCreated,
             onStyleLoadedCallback: _onStyleLoaded,
+            minMaxZoomPreference: MinMaxZoomPreference(0, AppConstants.getMaxZoom(context.read<app_auth.AuthProvider>().currentUser?.preferences['exploreMapTheme'])),
             initialCameraPosition: CameraPosition(
               target: _userLocation ??
                   const LatLng(11.319972, 75.932639), // NITC campus fallback

@@ -94,13 +94,13 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
           Text(
             widget.instruction,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 26,
               fontWeight: FontWeight.w900,
               color: Colors.black,
-              letterSpacing: -0.5,
+              letterSpacing: -0.7,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             'NIT Calicut, Kerala',
             style: TextStyle(
@@ -111,29 +111,12 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
           ),
           const SizedBox(height: 24),
 
-          // Image and Info Boxes
+          // Info Chips Row
           Row(
             children: [
-              // Entry Point Image
-              Expanded(
-                flex: 3,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: _buildImage(),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Distance and Time Boxes
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    _InfoChipVertical(label: widget.distance, icon: Icons.directions_walk_rounded),
-                    const SizedBox(height: 12),
-                    _InfoChipVertical(label: widget.time, icon: Icons.access_time_filled_rounded),
-                  ],
-                ),
-              ),
+              Expanded(child: _InfoChipVertical(label: widget.distance, icon: Icons.directions_walk_rounded)),
+              const SizedBox(width: 12),
+              Expanded(child: _InfoChipVertical(label: widget.time, icon: Icons.access_time_filled_rounded)),
             ],
           ),
           
@@ -146,124 +129,98 @@ class _CustomNavigationControlsState extends State<CustomNavigationControls> {
                     strokeWidth: 3,
                   ),
                 )
-              : _buildSwipeSlider(),
+              : _buildStartSlider(),
         ],
       ),
     );
   }
 
-  Widget _buildImage() {
-    if (widget.base64Image != null && widget.base64Image!.isNotEmpty) {
-      if (_decodedBytes != null) {
-        return Image.memory(
-          _decodedBytes!,
-          height: 100,
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+  Widget _buildStartSlider() {
+    double sliderWidth = 340.0; // Approximate width based on screen padding
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        return GestureDetector(
+          onHorizontalDragStart: (_) => setState(() => _isSliding = true),
+          onHorizontalDragUpdate: (d) {
+            if (!_isSliding) return;
+            setState(() {
+              // Clamp slider value between 0.0 and 1.0
+              // 52 is the width of the sliding circle, 6 is the padding
+              _sliderValue = (_sliderValue + d.primaryDelta! / (totalWidth - 64)).clamp(0.0, 1.0);
+            });
+          },
+          onHorizontalDragEnd: (_) {
+            if (_sliderValue > 0.8) {
+              setState(() {
+                _sliderValue = 1.0;
+                _isSliding = false;
+              });
+              widget.onStartNavigation();
+            } else {
+              setState(() {
+                _sliderValue = 0.0;
+                _isSliding = false;
+              });
+            }
+          },
+          child: Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                // Center Text (Fades out as slider moves)
+                Center(
+                  child: Opacity(
+                    opacity: (1.0 - _sliderValue * 2).clamp(0.0, 1.0),
+                    child: const Text(
+                      'Start Navigation',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                // Right Arrow (Fades out as slider moves)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 20),
+                    child: Opacity(
+                      opacity: (1.0 - _sliderValue * 2).clamp(0.0, 1.0),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ),
+                // Sliding Button (White Circle with Black Navigation Icon)
+                Positioned(
+                  left: _sliderValue * (totalWidth - 64),
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.navigation_rounded,
+                      color: Colors.black,
+                      size: 26,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
-      }
-      try {
-        final raw = widget.base64Image!.contains(',') 
-            ? widget.base64Image!.split(',').last 
-            : widget.base64Image!;
-        _decodedBytes = base64Decode(raw);
-        _lastBase64 = widget.base64Image;
-        return Image.memory(
-          _decodedBytes!,
-          height: 100,
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
-        );
-      } catch (e) {
-        return _buildPlaceholderImage();
-      }
-    }
-    return _buildPlaceholderImage();
-  }
-
-  Widget _buildPlaceholderImage() {
-    return Image.asset(
-      'assets/images/entry_point_blue_door.png',
-      height: 100,
-      fit: BoxFit.cover,
-    );
-  }
-
-  Widget _buildSwipeSlider() {
-    double sliderWidth = 340.0; // Approximate width
-    return GestureDetector(
-      onHorizontalDragStart: (_) => setState(() => _isSliding = true),
-      onHorizontalDragUpdate: (d) {
-        if (!_isSliding) return;
-        setState(() {
-          _sliderValue = (_sliderValue + d.primaryDelta! / (sliderWidth - 64)).clamp(0.0, 1.0);
-        });
       },
-      onHorizontalDragEnd: (_) {
-        if (_sliderValue > 0.8) {
-          setState(() {
-            _sliderValue = 1.0;
-            _isSliding = false;
-          });
-          widget.onStartNavigation();
-        } else {
-          setState(() {
-            _sliderValue = 0.0;
-            _isSliding = false;
-          });
-        }
-      },
-      child: Container(
-        height: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(32),
-        ),
-        child: Stack(
-          alignment: Alignment.centerLeft,
-          children: [
-            // Center Text
-            const Center(
-              child: Text(
-                'Start Navigation',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            // Right Arrow
-            const Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: EdgeInsets.only(right: 20),
-                child: Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
-              ),
-            ),
-            // Sliding Button
-            Positioned(
-              left: _sliderValue * (sliderWidth - 100), // Adjusted for padding and width
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.navigation_rounded,
-                  color: Colors.black,
-                  size: 26,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

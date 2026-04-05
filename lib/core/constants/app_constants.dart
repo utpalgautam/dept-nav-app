@@ -20,7 +20,18 @@ class AppConstants {
   static const double campusLng = 75.932639; // NITC exact longitude
   
   // Navigation
-  static const double entryPointRadius = 20.0; // meters
+  static const double entryPointRadius = 10.0; // meters
+
+  // Zoom Limits
+  static const double maxMapZoomStandard = 19.0;
+  static const double maxMapZoomSatellite = 18.0;
+
+  static double getMaxZoom(String? theme) {
+    if (theme?.toLowerCase() == 'satellite') {
+      return maxMapZoomSatellite;
+    }
+    return maxMapZoomStandard;
+  }
 }
 
 class MapStyle {
@@ -73,7 +84,7 @@ class MapStyle {
       "type": "raster",
       "source": "arcgis-satellite",
       "minzoom": 0,
-      "maxzoom": 20
+      "maxzoom": 18
     }
   ]
 }

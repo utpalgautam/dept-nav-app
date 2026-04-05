@@ -11,9 +11,14 @@ import 'widgets/turn_by_turn_widget.dart';
 import 'widgets/custom_navigation_controls.dart';
 import 'widgets/start_navigation_header.dart';
 import 'indoor_navigation_screen.dart';
+import 'entry_point_confirmation_screen.dart';
 import '../../core/utils/navigation_utils.dart';
 import '../../models/location_model.dart';
 import '../../services/firestore_service.dart';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'navigation_completion_screen.dart';
 
 enum MapFollowMode { northUp, headingUp }
@@ -142,11 +147,12 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     });
   }
 
-  void _onStyleLoaded() {
+  void _onStyleLoaded() async {
     setState(() => _isMapReady = true);
 
-    _initRouteLayers();
     _initUserLocationLayers();
+    _initRouteLayers();
+    _initDestinationMarkerLayers();
     _add3DBuildings();
     _addBuildingMarkers();
 
@@ -327,13 +333,13 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
       final epLatLng = LatLng(ep.latitude, ep.longitude);
       
       if (_currentDestMarkerPos == null) {
-        _drawDynamicDestinationMarker(epLatLng);
+        _drawDynamicDestinationMarker(epLatLng, entryPoint: ep);
       } else if (_currentDestMarkerPos!.latitude != epLatLng.latitude || _currentDestMarkerPos!.longitude != epLatLng.longitude) {
         if (_destinationMarker != null) {
           _mapController!.removeSymbol(_destinationMarker!);
           _destinationMarker = null;
         }
-        _drawDynamicDestinationMarker(epLatLng);
+        _drawDynamicDestinationMarker(epLatLng, entryPoint: ep);
       }
     }
 
@@ -486,6 +492,24 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
         ),
         belowLayerId: "user-location-halo", // Behind the user dot
       );
+
+      // 6. Add Connection Line (Route End to Destination)
+      await _mapController!.addSource("route-destination-connection-source",
+          const GeojsonSourceProperties(data: {"type": "FeatureCollection", "features": []}));
+
+      await _mapController!.addLayer(
+        "route-destination-connection-source",
+        "route-destination-connection",
+        const LineLayerProperties(
+          lineColor: '#3b82f6',
+          lineWidth: 4.0,
+          lineOpacity: 0.5,
+          lineDasharray: [0.2, 2.0],
+          lineJoin: 'round',
+          lineCap: 'round',
+        ),
+        belowLayerId: "destination-marker-layer", // Behind the destination pin
+      );
     } catch (e) {
       debugPrint("Error initializing route layers: $e");
     }
@@ -574,6 +598,29 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     await _mapController!.setGeoJsonSource("user-location-source", geojson);
   }
 
+  Future<void> _initDestinationMarkerLayers() async {
+    if (_mapController == null) return;
+    try {
+      await _mapController!.addSource("destination-source",
+          const GeojsonSourceProperties(data: {"type": "FeatureCollection", "features": []}));
+
+      await _mapController!.addLayer(
+        "destination-source",
+        "destination-marker-layer",
+        const SymbolLayerProperties(
+          iconImage: ["get", "icon-id"], // Data-driven icon image
+          iconSize: 0.8,
+          iconAnchor: 'bottom',
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+        ),
+        belowLayerId: "user-location-accuracy", // Show below user but above route
+      );
+    } catch (e) {
+      debugPrint("Error initializing destination marker layers: $e");
+    }
+  }
+
   void _updateUserMarkerNavigating(LatLng position, double heading) async {
     // No longer using single symbol, handled by GeoJSON layers
   }
@@ -642,6 +689,16 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
             {"type": "FeatureCollection", "features": []});
       }
 
+      // 4. Update Connection Line (Route End to Destination)
+      if (points.isNotEmpty && _currentDestMarkerPos != null) {
+        final connectionPoints = [points.last, _currentDestMarkerPos!];
+        final connectionGeoJson = NavigationUtils.toGeoJson(connectionPoints);
+        await _mapController!.setGeoJsonSource("route-destination-connection-source", connectionGeoJson);
+      } else {
+        await _mapController!.setGeoJsonSource("route-destination-connection-source",
+            {"type": "FeatureCollection", "features": []});
+      }
+
       if (!provider.isNavigating) {
         LatLngBounds bounds = _getBounds(points);
         _mapController!.animateCamera(
@@ -707,42 +764,163 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     }
   }
 
-  void _addDestinationMarker() async {
+  Future<void> _addDestinationMarker() async {
+    debugPrint('[_addDestinationMarker] Controller: ${_mapController != null}, Lat: ${widget.destLat}, Lng: ${widget.destLng}');
     if (_mapController == null ||
         widget.destLat == null ||
-        widget.destLng == null) return;
+        widget.destLng == null) {
+      debugPrint('[_addDestinationMarker] Returning early - missing requirements');
+      return;
+    }
+    
+    final pos = LatLng(
+      widget.targetEntryPoint?.latitude ?? widget.destLat!,
+      widget.targetEntryPoint?.longitude ?? widget.destLng!,
+    );
+    await _addCustomDestinationMarker(pos, entryPoint: widget.targetEntryPoint);
+  }
+
+  Future<void> _drawDynamicDestinationMarker(LatLng position, {EntryPoint? entryPoint}) async {
+    await _addCustomDestinationMarker(position, entryPoint: entryPoint);
+  }
+
+  Future<void> _addCustomDestinationMarker(LatLng position, {EntryPoint? entryPoint}) async {
+    debugPrint('[_addCustomDestinationMarker] Position: $position');
+    if (_mapController == null) {
+      debugPrint('[_addCustomDestinationMarker] Controller is null');
+      return;
+    }
+
     try {
-      final pos = LatLng(
-        widget.targetEntryPoint?.latitude ?? widget.destLat!,
-        widget.targetEntryPoint?.longitude ?? widget.destLng!,
-      );
-      _currentDestMarkerPos = pos;
-      _destinationMarker = await _mapController!.addSymbol(
-        SymbolOptions(
-          geometry: pos,
-          iconImage: 'assets/icons/destination_marker.png',
-          iconSize: 0.6,
-        ),
-      );
+      final effectiveEntryPoint = entryPoint ?? widget.targetEntryPoint;
+      final building = widget.targetBuilding;
+      
+      debugPrint('[_addCustomDestinationMarker] EntryPoint: ${effectiveEntryPoint?.id}, Building: ${building?.id}');
+      
+      // 1. Get Image
+      ui.Image? markerImage;
+      String? imageStr = effectiveEntryPoint?.imageUrl ?? building?.imageUrl;
+      debugPrint('[_addCustomDestinationMarker] Found Image String: ${imageStr != null}');
+      
+      if (imageStr != null && imageStr.isNotEmpty) {
+        if (imageStr.startsWith('http')) {
+          // It's a URL
+          final response = await http.get(Uri.parse(imageStr));
+          if (response.statusCode == 200) {
+            markerImage = await _decodeImage(response.bodyBytes);
+          }
+        } else {
+          // It's base64
+          final raw = imageStr.contains(',') ? imageStr.split(',').last : imageStr;
+          final bytes = base64Decode(raw);
+          markerImage = await _decodeImage(bytes);
+        }
+      }
+
+      // 2. Create the composite pin image
+      final iconId = "dest_marker_${DateTime.now().millisecondsSinceEpoch}";
+      final bytes = await _createMarkerImage(markerImage);
+      debugPrint('[_addCustomDestinationMarker] Created Image Bytes: ${bytes.length}');
+      
+      // 3. Add to Map
+      await _mapController!.addImage(iconId, bytes);
+      debugPrint('[_addCustomDestinationMarker] Added image to map: $iconId');
+
+      // 4. Update the GeoJSON source
+      final geojson = {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [position.longitude, position.latitude],
+            },
+            "properties": {
+              "icon-id": iconId,
+            },
+          }
+        ]
+      };
+
+      await _mapController!.setGeoJsonSource("destination-source", geojson);
+      debugPrint('[_addCustomDestinationMarker] Source updated successfully');
+      _currentDestMarkerPos = position;
+      
     } catch (e) {
-      debugPrint('Error adding destination marker: $e');
+      debugPrint('Error adding custom destination marker: $e');
+      // Fallback to basic marker if something goes wrong
+      _drawFallbackMarker(position);
     }
   }
 
-  void _drawDynamicDestinationMarker(LatLng position) async {
-    _currentDestMarkerPos = position;
-    if (_mapController == null) return;
-    try {
-      _destinationMarker = await _mapController!.addSymbol(
+  Future<ui.Image> _decodeImage(Uint8List bytes) async {
+    final Completer<ui.Image> completer = Completer();
+    ui.decodeImageFromList(bytes, (ui.Image img) => completer.complete(img));
+    return completer.future;
+  }
+
+  Future<Uint8List> _createMarkerImage(ui.Image? doorImage) async {
+    const double width = 120.0;
+    const double height = 160.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    final paint = Paint()..color = Colors.black;
+    
+    // Draw Pin Body (SVG-like path)
+    final path = Path();
+    path.moveTo(width / 2, height); // Tip
+    path.lineTo(width * 0.1, height * 0.45);
+    path.arcToPoint(Offset(width * 0.9, height * 0.45), radius: const Radius.circular(width / 2));
+    path.close();
+    canvas.drawPath(path, paint);
+
+    // Draw Circular Cutout at Top
+    const double circleRadius = width * 0.38;
+    final Offset circleCenter = Offset(width / 2, width / 2);
+    
+    // If we have an image, clip and draw it
+    if (doorImage != null) {
+      canvas.save();
+      final clipPath = Path()..addOval(Rect.fromCircle(center: circleCenter, radius: circleRadius));
+      canvas.clipPath(clipPath);
+      
+      // Draw image to fit the circle
+      double scale = (circleRadius * 2) / (doorImage.width > doorImage.height ? doorImage.height : doorImage.width);
+      canvas.drawImageRect(
+        doorImage,
+        Rect.fromLTWH(0, 0, doorImage.width.toDouble(), doorImage.height.toDouble()),
+        Rect.fromCircle(center: circleCenter, radius: circleRadius),
+        Paint(),
+      );
+      canvas.restore();
+    } else {
+      // Fallback: draw a white circle if no image
+      canvas.drawCircle(circleCenter, circleRadius, Paint()..color = Colors.white);
+    }
+
+    // Add a premium border to the circle
+    canvas.drawCircle(circleCenter, circleRadius, Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  void _drawFallbackMarker(LatLng position) async {
+     _destinationMarker = await _mapController!.addSymbol(
         SymbolOptions(
           geometry: position,
-          iconImage: 'assets/icons/destination_marker.png',
-          iconSize: 0.6,
+          iconImage: 'assets/icons/navigation_marker.png', // Temporary fallback
+          iconSize: 0.5,
+          iconAnchor: 'center',
         ),
       );
-    } catch (e) {
-      debugPrint('Error adding dynamic destination marker: $e');
-    }
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -771,6 +949,26 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
     provider.stopNavigation();
     provider.removeListener(_onProviderUpdated);
     Navigator.pop(context);
+  }
+
+  void _navigateToConfirmationScreen(BuildContext context) {
+    final provider = Provider.of<NavigationProvider>(context, listen: false);
+    final effectiveEntryPoint = provider.targetEntryPoint ?? widget.targetEntryPoint;
+
+    if (widget.targetBuilding != null && effectiveEntryPoint != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EntryPointConfirmationScreen(
+            buildingId: widget.targetBuilding!.id,
+            buildingName: widget.targetBuilding!.name,
+            entryPointId: effectiveEntryPoint.id,
+            entryPointImageUrl: effectiveEntryPoint.imageUrl ?? widget.targetBuilding!.imageUrl,
+            destinationLocationId: widget.destinationId,
+          ),
+        ),
+      );
+    }
   }
 
   void _navigateToIndoorScreen(BuildContext context) {
@@ -811,8 +1009,8 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
           _isTransitioningToIndoor = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (widget.targetBuilding != null) {
-              // Has an indoor leg → transition to indoor navigation screen
-              _navigateToIndoorScreen(context);
+              // Has an indoor leg → transition to confirmation screen
+              _navigateToConfirmationScreen(context);
             } else {
               // Outdoor-only destination reached → show completion screen
               final elapsed = _navigationStartTime != null
@@ -862,6 +1060,7 @@ class _OutdoorNavigationScreenState extends State<OutdoorNavigationScreen>
                 MaplibreMap(
                   onMapCreated: _onMapCreated,
                   onStyleLoadedCallback: _onStyleLoaded,
+                  minMaxZoomPreference: MinMaxZoomPreference(0, AppConstants.getMaxZoom(auth.currentUser?.preferences['outdoorNavTheme'])),
                   initialCameraPosition: const CameraPosition(
                     target: LatLng(AppConstants.campusLat, AppConstants.campusLng),
                     zoom: AppConstants.defaultMapZoom,
