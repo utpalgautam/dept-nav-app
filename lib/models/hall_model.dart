@@ -9,6 +9,7 @@ class HallModel {
   final String id;
   final String name;
   final HallType type;
+  final String? typeFromDb;
 
   /// ID of the corresponding document in the `locations` collection.
   final String locationId;
@@ -27,6 +28,7 @@ class HallModel {
     required this.name,
     required this.type,
     required this.locationId,
+    this.typeFromDb,
     this.contactPerson,
     this.department = 'General',
     this.photoUrl,
@@ -49,6 +51,7 @@ class HallModel {
         id: id,
         name: data['name'] ?? '',
         type: _parseHallType(data['type']),
+        typeFromDb: data['type'] as String?,
         locationId: data['locationId'] ?? '',
         contactPerson: data['contactPerson'] as String?,
         department: data['department'] ?? 'General',
@@ -66,12 +69,19 @@ class HallModel {
   }
 
   String get typeString {
-    switch (type) {
-      case HallType.lectureHall:    return 'Lecture Hall';
-      case HallType.seminarHall:    return 'Seminar Hall';
-      case HallType.auditorium:     return 'Auditorium';
-      case HallType.conferenceRoom: return 'Conference Room';
+    String t;
+    if (typeFromDb != null && typeFromDb!.isNotEmpty) {
+      t = typeFromDb!.trim();
+    } else {
+      switch (type) {
+        case HallType.lectureHall:    t = 'Lecture Hall'; break;
+        case HallType.seminarHall:    t = 'Seminar Hall'; break;
+        case HallType.auditorium:     t = 'Auditorium'; break;
+        case HallType.conferenceRoom: t = 'Conference Room'; break;
+      }
     }
+    if (t.isEmpty) return t;
+    return t[0].toUpperCase() + t.substring(1).toLowerCase();
   }
 
   Map<String, dynamic> toFirestore() => {
