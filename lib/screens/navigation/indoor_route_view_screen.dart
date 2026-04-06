@@ -621,6 +621,22 @@ class _IndoorRouteViewScreenState extends State<IndoorRouteViewScreen> {
             _panY += details.focalPointDelta.dy;
             _scale = (_baseScale * details.scale).clamp(0.5, 6.0);
             _rotationZ = _baseRotation + details.rotation;
+
+            // Restrict translation so that at least 10% of the map remains visible
+            final double viewW = displayW * _scale;
+            final double viewH = displayH * _scale;
+            
+            // Horizontal: 10% visibility on side
+            final double maxPanX = screenW / 2 + 0.4 * viewW;
+            _panX = _panX.clamp(-maxPanX, maxPanX);
+
+            // Vertical: Account for header (~130) and bottom info box (~180)
+            final double topOverlay = 130.0;
+            final double bottomOverlay = 180.0;
+            final double minY = topOverlay - screenH / 2 - 0.4 * viewH;
+            final double maxY = (screenH - bottomOverlay) - screenH / 2 + 0.4 * viewH;
+
+            _panY = _panY.clamp(minY, maxY);
           });
         },
         child: ClipRRect(

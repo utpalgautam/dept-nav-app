@@ -459,25 +459,17 @@ class NavigationProvider extends ChangeNotifier {
 
       if (_nextIndoorNodeIndex < _currentIndoorPath.length - 1) {
         _nextIndoorNodeIndex++;
-        _updateIndoorInstruction();
       } else {
         _currentIndoorInstruction = "You have arrived at your destination";
         // Final Snap: Force to destination node coordinates
         _indoorX = nextNode.x;
         _indoorY = nextNode.y;
-      }
-    } else {
-      // Update "Go straight for X meters"
-      double distMeters = dist / _mapUnitsPerMeter;
-      if (!_currentIndoorInstruction.contains("Turn") && !_currentIndoorInstruction.contains("destination")) {
-        _currentIndoorInstruction = "Go straight for ${distMeters.toStringAsFixed(0)} meters";
-        
-        // Speak if distance is a multiple of 10 for "Go straight"
-        if (_voiceService.isVoiceEnabled && distMeters.round() % 10 == 0 && _lastSpokenInstruction != _currentIndoorInstruction) {
-           _speakInstruction(_currentIndoorInstruction);
-        }
+        _speakInstruction(_currentIndoorInstruction);
+        return;
       }
     }
+
+    _updateIndoorInstruction();
   }
 
   void _speakInstruction(String text) {
@@ -486,33 +478,116 @@ class NavigationProvider extends ChangeNotifier {
     _lastSpokenInstruction = text;
   }
 
+  int _findNextTurnIndex() {
+    if (_currentIndoorPath.isEmpty || _nextIndoorNodeIndex >= _currentIndoorPath.length) {
+      return _currentIndoorPath.length - 1;
+    }
+
+    for (int i = _nextIndoorNodeIndex; i < _currentIndoorPath.length - 1; i++) {
+      double prevX, prevY;
+      if (i == _nextIndoorNodeIndex) {
+        prevX = _indoorX ?? _currentIndoorPath[i - 1].x;
+        prevY = _indoorY ?? _currentIndoorPath[i - 1].y;
+      } else {
+        prevX = _currentIndoorPath[i - 1].x;
+        prevY = _currentIndoorPath[i - 1].y;
+      }
+      
+      final p2 = _currentIndoorPath[i];
+      final p3 = _currentIndoorPath[i + 1];
+
+      double angle1 = math.atan2(p2.y - prevY, p2.x - prevX);
+      double angle2 = math.atan2(p3.y - p2.y, p3.x - p2.x);
+
+      double diff = (angle2 - angle1 + math.pi) % (2 * math.pi) - math.pi;
+
+      if (diff.abs() > math.pi / 4) {
+        return i; // Turn occurs AT node i
+      }
+    }
+    return _currentIndoorPath.length - 1; 
+  }
+
+  double _getDistanceToNode(int targetIndex) {
+    if (_indoorX == null || _indoorY == null || _currentIndoorPath.isEmpty) return 0;
+    
+    double dist = 0.0;
+    double currX = _indoorX!;
+    double currY = _indoorY!;
+    
+    for (int i = _nextIndoorNodeIndex; i <= targetIndex; i++) {
+      final node = _currentIndoorPath[i];
+      dist += math.sqrt(math.pow(currX - node.x, 2) + math.pow(currY - node.y, 2));
+      currX = node.x;
+      currY = node.y;
+    }
+    return dist;
+  }
+
   void _updateIndoorInstruction() {
     if (_currentIndoorPath.isEmpty || _nextIndoorNodeIndex >= _currentIndoorPath.length) return;
 
-    if (_nextIndoorNodeIndex == _currentIndoorPath.length - 1) {
-      _currentIndoorInstruction = "Destination is ahead";
+    if (_nextIndoorNodeIndex == _currentIndoorPath.length - 1 && _getDistanceToNode(_nextIndoorNodeIndex) < 100.0) {
+      _currentIndoorInstruction = "You have arrived at your destination";
       return;
     }
 
-    // Calculate angle between current edge and next edge
-    final p1 = _currentIndoorPath[_nextIndoorNodeIndex - 1];
-    final p2 = _currentIndoorPath[_nextIndoorNodeIndex];
-    final p3 = _currentIndoorPath[_nextIndoorNodeIndex + 1];
-
-    double angle1 = math.atan2(p2.y - p1.y, p2.x - p1.x);
-    double angle2 = math.atan2(p3.y - p2.y, p3.x - p2.x);
-
-    double diff = (angle2 - angle1 + math.pi) % (2 * math.pi) - math.pi;
-
-    if (diff > math.pi / 4) {
-      _currentIndoorInstruction = "Turn right at ${p2.label}";
-    } else if (diff < -math.pi / 4) {
-      _currentIndoorInstruction = "Turn left at ${p2.label}";
-    } else {
-      _currentIndoorInstruction = "Go straight towards ${p2.label}";
-    }
+    int nextTurnIdx = _findNextTurnIndex();
+    double distToTurn = _getDistanceToNode(nextTurnIdx);
+    double distMeters = distToTurn / _mapUnitsPerMeter;
     
-    _speakInstruction(_currentIndoorInstruction);
+    String newInstruction = "";
+
+    if (nextTurnIdx == _nextIndoorNodeIndex && nextTurnIdx < _currentIndoorPath.length - 1) {
+      final p1 = _currentIndoorPath[_nextIndoorNodeIndex - 1];
+      final p2 = _currentIndoorPath[_nextIndoorNodeIndex];
+      final p3 = _currentIndoorPath[_nextIndoorNodeIndex + 1];
+
+      double prevX = _indoorX ?? p1.x;
+      double prevY = _indoorY ?? p1.y;
+
+      double angle1 = math.atan2(p2.y - prevY, p2.x - prevX);
+      double angle2 = math.atan2(p3.y - p2.y, p3.x - p2.x);
+      double diff = (angle2 - angle1 + math.pi) % (2 * math.pi) - math.pi;
+
+      String dir = diff > math.pi / 4 ? "right" : "left";
+      
+      if (distMeters <= 3.0) {
+        newInstruction = "Turn $dir at ${p2.label}";
+      } else {
+        newInstruction = "In ${distMeters.toStringAsFixed(0)}m, turn $dir at ${p2.label}";
+      }
+    } else if (nextTurnIdx == _currentIndoorPath.length - 1) {
+      if (distMeters <= 3.0) {
+        newInstruction = "Destination is ahead";
+      } else {
+        newInstruction = "Go straight for ${distMeters.toStringAsFixed(0)} meters to destination";
+      }
+    } else {
+      newInstruction = "Go straight for ${distMeters.toStringAsFixed(0)} meters";
+    }
+
+    _currentIndoorInstruction = newInstruction;
+
+    if (_voiceService.isVoiceEnabled) {
+       if (newInstruction.startsWith("Turn ") || newInstruction.startsWith("Destination") || newInstruction.startsWith("You have arrived")) {
+          if (_lastSpokenInstruction != newInstruction) {
+             _speakInstruction(newInstruction);
+          }
+       } else if (newInstruction.startsWith("In ")) {
+          if (distMeters.round() % 5 == 0 && distMeters.round() > 0) {
+             if (_lastSpokenInstruction != newInstruction) {
+               _speakInstruction(newInstruction);
+             }
+          }
+       } else if (newInstruction.startsWith("Go straight")) {
+          if (distMeters.round() % 10 == 0 && distMeters.round() > 0) {
+             if (_lastSpokenInstruction != newInstruction) {
+               _speakInstruction(newInstruction);
+             }
+          }
+       }
+    }
   }
 
   math.Point<double> _snapToGraph(double x, double y) {
