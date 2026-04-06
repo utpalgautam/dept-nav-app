@@ -302,7 +302,7 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
 
               Expanded(
                 child: ClipRect(
-                  clipper: const _TopOnlyClipper(),
+                  // Standard ClipRect clips to the child's bounds, preventing bleed.
                   child: _isLoading
                       ? const Center(
                           child: CircularProgressIndicator(color: Colors.black))
@@ -371,6 +371,22 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
             _panY += details.focalPointDelta.dy;
             _scale = (_baseScale * details.scale).clamp(0.5, 6.0);
             _rotationZ = _baseRotation + details.rotation;
+
+            // Restrict translation so that at least 10% of the map remains visible
+            final double viewW = displayW * _scale;
+            final double viewH = displayH * _scale;
+            
+            // Horizontal: 10% visibility on side
+            final double maxPanX = screenW / 2 + 0.4 * viewW;
+            _panX = _panX.clamp(-maxPanX, maxPanX);
+
+            // Vertical: Account for large top header/info area (~280)
+            final double topOverlay = 280.0;
+            final double bottomOverlay = 40.0;
+            final double minY = topOverlay - screenH / 2 - 0.4 * viewH;
+            final double maxY = (screenH - bottomOverlay) - screenH / 2 + 0.4 * viewH;
+
+            _panY = _panY.clamp(minY, maxY);
           });
         },
         child: Container(
@@ -796,16 +812,3 @@ class _TrianglePainter extends CustomPainter {
   bool shouldRepaint(_TrianglePainter oldDelegate) => false;
 }
 
-class _TopOnlyClipper extends CustomClipper<Rect> {
-  const _TopOnlyClipper();
-
-  @override
-  Rect getClip(Size size) {
-    // Return a rect that is effectively infinite on sides and bottom
-    // but starts at y=0 (the top of the clipped area).
-    return Rect.fromLTWH(-5000, 0, 10000, 10000);
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Rect> oldClipper) => false;
-}
