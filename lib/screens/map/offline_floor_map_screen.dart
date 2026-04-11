@@ -71,6 +71,7 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
             mapImageUrl: floorData.mapImageUrl,
             pois: floorData.pois,
             graph: graph,
+            roomInfoMap: floorData.roomInfoMap,
           );
           // Save updated model with graph offline
           await _offlineStorageService.saveFloorMap(
@@ -599,39 +600,42 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
       return Positioned(
         left: left - 3,
         top: top - 3,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: _nodeColor(node.type),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1),
-              ),
-            ),
-            const SizedBox(width: 3),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.88),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.black12, width: 0.5),
-              ),
-              child: Text(
-                node.label,
-                style: const TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+        child: GestureDetector(
+          onTap: () => _showRoomInfoPopup(node.label, node.type),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: _nodeColor(node.type),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+              const SizedBox(width: 3),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.88),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.black12, width: 0.5),
+                ),
+                child: Text(
+                  node.label,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }).toList();
@@ -671,64 +675,301 @@ class _OfflineFloorMapScreenState extends State<OfflineFloorMapScreen> {
       const double stemH = 5.0;
       const double dotR = 3.5;
 
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: sx - dotR,
-            top: sy - dotR,
-            child: Container(
-              width: dotR * 2,
-              height: dotR * 2,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+      return GestureDetector(
+        onTap: () => _showRoomInfoPopup(node.label, node.type),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: sx - dotR,
+              top: sy - dotR,
+              child: Container(
+                width: dotR * 2,
+                height: dotR * 2,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
               ),
             ),
+            Positioned(
+              left: sx,
+              top: sy - stemH - 2,
+              child: FractionalTranslation(
+                translation: const Offset(-0.5, -1.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        node.label,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    CustomPaint(
+                      size: const Size(8, 5),
+                      painter: _TrianglePainter(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  /// Shows a premium-styled bottom sheet with room details for a tapped label.
+  void _showRoomInfoPopup(String label, String nodeType) {
+    final roomInfo = _currentFloorData?.roomInfoMap?[label];
+    final bool hasDetails = roomInfo != null && roomInfo.names.isNotEmpty;
+
+    bool isFacultyLabel = false;
+    if (hasDetails && roomInfo.type != null) {
+      isFacultyLabel = roomInfo.type!.toLowerCase().contains('faculty');
+    }
+
+    final String floorLabel = _selectedFloor == 0
+        ? 'Ground Floor'
+        : 'Floor $_selectedFloor';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF1C1D21),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          Positioned(
-            left: sx,
-            top: sy - stemH - 2,
-            child: FractionalTranslation(
-              translation: const Offset(-0.5, -1.0),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Handle bar
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: Text(
-                      node.label,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Header row: icon + label
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _nodeColor(nodeType).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          _nodeIcon(nodeType),
+                          color: _nodeColor(nodeType),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.building.name} · $floorLabel',
+                              style: const TextStyle(
+                                color: Color(0xFF999999),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Details section
+                  if (hasDetails) ...[
+                    // Details card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A2E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoRow(
+                            Icons.meeting_room_outlined,
+                            isFacultyLabel ? 'Cabin No.' : 'Room No.',
+                            label,
+                          ),
+                          if (roomInfo?.type != null) ...[
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                              Icons.info_outline,
+                              'Category',
+                              roomInfo!.type!,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          const Divider(color: Colors.white24, height: 1),
+                          const SizedBox(height: 16),
+                          Text(
+                            isFacultyLabel ? 'Faculties' : 'Designation / Name',
+                            style: const TextStyle(
+                              color: Color(0xFF999999),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...roomInfo!.names.map((name) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              )),
+                        ],
                       ),
                     ),
-                  ),
-                  CustomPaint(
-                    size: const Size(8, 5),
-                    painter: _TrianglePainter(),
-                  ),
+                  ] else ...[
+                    // Not available message
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A2E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Color(0xFF666666), size: 32),
+                          SizedBox(height: 10),
+                          Text(
+                            'Details not available',
+                            style: TextStyle(
+                              color: Color(0xFF999999),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'No information found in the database for this room.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
-        ],
-      );
-    }).toList();
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: const Color(0xFF888888), size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF888888),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _nodeIcon(String type) {
+    switch (type) {
+      case 'room':
+        return Icons.meeting_room_outlined;
+      case 'stairs':
+        return Icons.stairs_outlined;
+      case 'entrance':
+        return Icons.door_front_door_outlined;
+      default:
+        return Icons.location_on_outlined;
+    }
   }
 
   Color _nodeColor(String type) {

@@ -3,6 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import '../../models/building_model.dart';
+import '../../models/floor_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/offline_storage_service.dart';
 import '../../widgets/bottom_nav_bar.dart';
@@ -73,7 +74,44 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
           source: Source.server,
         );
         if (floorData != null) {
-          await _offlineStorageService.saveFloorMap(buildingId, i, floorData);
+          // Extract labels from graph nodes to fetch room details
+          // We must ensure the graph is fetched even if it's in a separate collection
+          var currentGraph = floorData.graph;
+          if (currentGraph == null) {
+            currentGraph = await _firestoreService.getIndoorGraph(buildingId, i);
+          }
+
+          FloorModel dataToSave = floorData;
+          
+          if (currentGraph != null) {
+            final labels = currentGraph.nodes
+                .where((n) => n.type != 'hallway' && n.label.isNotEmpty)
+                .map((n) => n.label)
+                .toList();
+                
+            Map<String, RoomInfo> roomInfoMap = {};
+            if (labels.isNotEmpty) {
+              try {
+                roomInfoMap = await _firestoreService
+                    .fetchRoomInfoForLabels(buildingId, i, labels);
+              } catch (_) {
+                // Fallback to empty map if fetch fails
+              }
+            }
+            
+            dataToSave = FloorModel(
+              buildingId: floorData.buildingId,
+              floorNumber: floorData.floorNumber,
+              svgMapData: floorData.svgMapData,
+              svgMapUrl: floorData.svgMapUrl,
+              mapImageUrl: floorData.mapImageUrl,
+              pois: floorData.pois,
+              graph: currentGraph, // Use the fetched graph
+              roomInfoMap: roomInfoMap,
+            );
+          }
+          
+          await _offlineStorageService.saveFloorMap(buildingId, i, dataToSave);
         }
       }
 
