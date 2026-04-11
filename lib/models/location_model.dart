@@ -28,15 +28,15 @@ class LocationModel {
   factory LocationModel.fromFirestore(Map<String, dynamic> data, String id) {
     return LocationModel(
       id: id,
-      name: data['name'] ?? '',
-      type: _parseLocationType(data['type']),
-      buildingId: data['buildingId'] as String?,
-      floor: data['floor'] as int?,
-      roomNumber: data['roomNumber'] as String?,
-      description: data['description'] as String?,
+      name: (data['name'] ?? '').toString(),
+      type: _parseLocationType(data['type']?.toString()),
+      buildingId: data['buildingId']?.toString(),
+      floor: (data['floor'] as num?)?.toInt(),
+      roomNumber: data['roomNumber']?.toString(),
+      description: data['description']?.toString(),
       tags: List<String>.from(data['tags'] ?? []),
-      searchCount: data['searchCount'] ?? 0,
-      isActive: data['isActive'] ?? true,
+      searchCount: (data['searchCount'] as num?)?.toInt() ?? 0,
+      isActive: data['isActive'] != false, // Default to true if missing or true
     );
   }
 

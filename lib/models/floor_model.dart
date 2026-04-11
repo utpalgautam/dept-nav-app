@@ -165,6 +165,32 @@ class POI {
   }
 }
 
+class RoomInfo {
+  final String label;
+  final List<String> names;
+  final String? type;
+
+  RoomInfo({
+    required this.label,
+    this.names = const [],
+    this.type,
+  });
+
+  factory RoomInfo.fromJson(Map<String, dynamic> json) {
+    return RoomInfo(
+      label: json['label'] ?? '',
+      names: List<String>.from(json['names'] ?? []),
+      type: json['type'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'label': label,
+        if (names.isNotEmpty) 'names': names,
+        if (type != null) 'type': type,
+      };
+}
+
 class FloorModel {
   final String buildingId;
   final int floorNumber;
@@ -182,6 +208,9 @@ class FloorModel {
 
   final IndoorGraph? graph;
 
+  /// Pre-fetched room details keyed by label, bundled with offline downloads.
+  final Map<String, RoomInfo> roomInfoMap;
+
   FloorModel({
     required this.buildingId,
     required this.floorNumber,
@@ -190,6 +219,7 @@ class FloorModel {
     this.mapImageUrl,
     this.pois = const [],
     this.graph,
+    this.roomInfoMap = const {},
   });
 
   factory FloorModel.fromFirestore(
@@ -207,6 +237,16 @@ class FloorModel {
           .toList();
     }
 
+    // Parse roomInfoMap
+    final roomInfoData = data['roomInfoMap'];
+    Map<String, RoomInfo> roomInfoMap = {};
+    if (roomInfoData is Map) {
+      roomInfoMap = roomInfoData.map((key, value) => MapEntry(
+            key.toString(),
+            RoomInfo.fromJson(Map<String, dynamic>.from(value)),
+          ));
+    }
+
     return FloorModel(
       buildingId: buildingId,
       floorNumber: floorNumber,
@@ -217,6 +257,7 @@ class FloorModel {
       graph: data['graph'] != null
           ? IndoorGraph.fromFirestore(data['graph'] as Map<String, dynamic>)
           : null,
+      roomInfoMap: roomInfoMap,
     );
   }
 
@@ -227,6 +268,8 @@ class FloorModel {
       if (mapImageUrl != null) 'mapImageUrl': mapImageUrl,
       'pois': pois.map((p) => p.toFirestore()).toList(),
       if (graph != null) 'graph': graph!.toFirestore(),
+      if (roomInfoMap.isNotEmpty)
+        'roomInfoMap': roomInfoMap.map((k, v) => MapEntry(k, v.toJson())),
     };
   }
 }

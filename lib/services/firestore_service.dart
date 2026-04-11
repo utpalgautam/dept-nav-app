@@ -461,4 +461,85 @@ class FirestoreService {
   Future<void> logSearch(SearchLogModel log) async {
     await _searchLogs.add(log.toFirestore());
   }
+
+  // ========== ROOM INFO FOR OFFLINE MAP LABELS ==========
+
+  /// Fetches room details for a list of labels in a given building.
+  /// Matches labels against the `locations` collection, robustly grouping
+  /// by room number/name to support multiple entities (e.g. multiple 
+  /// faculties in one cabin).
+  Future<Map<String, RoomInfo>> fetchRoomInfoForLabels(
+      String buildingId, int floorNumber, List<String> labels) async {
+    if (labels.isEmpty) return {};
+
+    final Map<String, RoomInfo> result = {};
+
+    try {
+      // Fetch all locations to handle missing/wrong building IDs or inactive fields
+      final snapshot = await _locations.get();
+      final allLocations = <LocationModel>[];
+      
+      for (var doc in snapshot.docs) {
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          // Simple in-memory filter to be robust to missingisActive fields
+          if (data['isActive'] == false) continue;
+          
+          allLocations.add(LocationModel.fromFirestore(data, doc.id));
+        } catch (e) {
+          // If one record is corrupted, we skip it instead of failing the whole floor
+          print('Error parsing location ${doc.id}: $e');
+        }
+      }
+
+      for (final label in labels) {
+        final targetLabel = label.trim().toLowerCase();
+        if (targetLabel.isEmpty) continue;
+
+        final List<LocationModel> matches = [];
+
+        for (final loc in allLocations) {
+          final locRoom = (loc.roomNumber ?? '').trim().toLowerCase();
+
+          // Strict match: Compare labels with roomNumber field directly
+          if (locRoom.isNotEmpty && locRoom == targetLabel) {
+            matches.add(loc);
+          }
+        }
+
+        if (matches.isEmpty) {
+          result[label] = RoomInfo(label: label);
+        } else {
+          // Deduplicate names and pick a type
+          final namesSet = matches.map((m) => m.name.trim()).toSet();
+          final List<String> names = namesSet.toList();
+          
+          // Sort names to be consistent
+          names.sort();
+
+          // Determine predominant type
+          String? typeStr;
+          if (matches.any((m) => m.type == LocationType.faculty)) {
+            typeStr = 'Faculty Cabin';
+          } else if (matches.any((m) => m.type == LocationType.lab)) {
+            typeStr = 'Laboratory';
+          } else if (matches.any((m) => m.type == LocationType.hall)) {
+            typeStr = 'Hall';
+          } else {
+            typeStr = matches.first.typeString;
+          }
+          
+          result[label] = RoomInfo(
+            label: label,
+            names: names,
+            type: typeStr,
+          );
+        }
+      }
+    } catch (e) {
+      // On failure, return what we have or empty
+    }
+
+    return result;
+  }
 }
